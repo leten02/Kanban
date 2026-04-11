@@ -1,6 +1,7 @@
 import { useDrop } from 'react-dnd';
 import { Task } from '../App';
 import { TaskCard } from './TaskCard';
+import { Plus } from 'lucide-react';
 
 interface KanbanColumnProps {
   status: Task['status'];
@@ -8,9 +9,10 @@ interface KanbanColumnProps {
   tasks: Task[];
   moveTask: (taskId: string, newStatus: Task['status']) => void;
   onTaskClick: (task: Task) => void;
+  onAddTask?: (status: Task['status']) => void;
 }
 
-export function KanbanColumn({ status, title, tasks, moveTask, onTaskClick }: KanbanColumnProps) {
+export function KanbanColumn({ status, title, tasks, moveTask, onTaskClick, onAddTask }: KanbanColumnProps) {
   const [{ isOver }, drop] = useDrop(() => ({
     accept: 'TASK',
     drop: (item: { id: string }) => {
@@ -26,6 +28,15 @@ export function KanbanColumn({ status, title, tasks, moveTask, onTaskClick }: Ka
       <div className="flex items-center gap-2 mb-3">
         <h3 className="text-xs text-neutral-500 uppercase tracking-wide font-medium">{title}</h3>
         <span className="text-xs text-neutral-500">{tasks.length}</span>
+        {onAddTask && (
+          <button
+            onClick={() => onAddTask(status)}
+            className="ml-auto p-0.5 rounded hover:bg-neutral-200 text-neutral-400 hover:text-neutral-700 transition-colors"
+            title={`${title}에 새 작업 추가`}
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       <div

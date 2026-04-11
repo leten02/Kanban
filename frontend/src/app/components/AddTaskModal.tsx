@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Task } from '../App';
 import { X } from 'lucide-react';
 import { AssigneePicker } from './AssigneePicker';
@@ -9,9 +9,10 @@ interface AddTaskModalProps {
   onClose: () => void;
   onAdd: (task: Omit<Task, 'id'>) => void;
   projectId: number;
+  initialStatus?: Task['status'];
 }
 
-export function AddTaskModal({ isOpen, onClose, onAdd, projectId }: AddTaskModalProps) {
+export function AddTaskModal({ isOpen, onClose, onAdd, projectId, initialStatus }: AddTaskModalProps) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -20,9 +21,15 @@ export function AddTaskModal({ isOpen, onClose, onAdd, projectId }: AddTaskModal
     priority: 'medium' as Task['priority'],
     startDate: '',
     dueDate: '',
-    status: 'todo' as Task['status'],
+    status: (initialStatus ?? 'todo') as Task['status'],
     tags: [] as string[],
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(prev => ({ ...prev, status: initialStatus ?? 'todo' }));
+    }
+  }, [isOpen, initialStatus]);
 
   if (!isOpen) return null;
 

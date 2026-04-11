@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Users, X, Trash2, AlertCircle, Loader2 } from 'lucide-react';
-import { schoolApi, SchoolRoom, SchoolReservation } from '../../lib/api';
+import { schoolApi, SchoolRoom, SchoolReservation, memberApi, ProjectMember } from '../../lib/api';
 
-export function RoomReservation() {
+export function RoomReservation({ projectId }: { projectId?: number }) {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [rooms, setRooms] = useState<SchoolRoom[]>([]);
   const [reservations, setReservations] = useState<SchoolReservation[]>([]);
@@ -10,14 +10,17 @@ export function RoomReservation() {
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<SchoolReservation | null>(null);
+  const [preselect, setPreselect] = useState<{ roomId: number; startTime: string; endTime: string } | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
   const dragScrollLeft = useRef(0);
+  const dragMoved = useRef(false);
 
   const onDragStart = (e: React.MouseEvent) => {
     isDragging.current = true;
+    dragMoved.current = false;
     dragStartX.current = e.pageX - (scrollRef.current?.offsetLeft ?? 0);
     dragScrollLeft.current = scrollRef.current?.scrollLeft ?? 0;
   };
@@ -25,9 +28,15 @@ export function RoomReservation() {
     if (!isDragging.current || !scrollRef.current) return;
     e.preventDefault();
     const x = e.pageX - scrollRef.current.offsetLeft;
+    const moved = Math.abs(x - dragStartX.current);
+    if (moved > 4) dragMoved.current = true;
     scrollRef.current.scrollLeft = dragScrollLeft.current - (x - dragStartX.current);
   };
   const onDragEnd = () => { isDragging.current = false; };
+
+  const HOUR_WIDTH = 120;
+  const START_HOUR = 9;
+  const END_HOUR = 24;
 
   const loadData = useCallback(async (date: string) => {
     setIsLoading(true);
@@ -91,8 +100,6 @@ export function RoomReservation() {
     }
   };
 
-  const START_HOUR = 9;
-  const END_HOUR = 24;
   const timeSlots = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => i + START_HOUR);
 
   const getReservationsForRoom = (roomId: number) =>
@@ -101,14 +108,30 @@ export function RoomReservation() {
   const getPosition = (start_at: string, end_at: string) => {
     const s = new Date(start_at);
     const e = new Date(end_at);
-    const startPos = (s.getHours() - START_HOUR) * 120 + (s.getMinutes() / 60) * 120;
-    const endPos = (e.getHours() - START_HOUR) * 120 + (e.getMinutes() / 60) * 120;
+    const startPos = (s.getHours() - START_HOUR) * HOUR_WIDTH + (s.getMinutes() / 60) * HOUR_WIDTH;
+    const endPos = (e.getHours() - START_HOUR) * HOUR_WIDTH + (e.getMinutes() / 60) * HOUR_WIDTH;
     return { left: startPos, width: endPos - startPos };
   };
 
   const formatTime = (iso: string) => {
     const d = new Date(iso);
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+
+  const handleTimeSlotClick = (e: React.MouseEvent<HTMLDivElement>, room: SchoolRoom) => {
+    if (dragMoved.current) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const scrollLeft = scrollRef.current?.scrollLeft ?? 0;
+    const x = e.clientX - rect.left + scrollLeft;
+    const clickedHour = Math.floor(x / HOUR_WIDTH) + START_HOUR;
+    const startH = Math.min(Math.max(clickedHour, START_HOUR), END_HOUR - 1);
+    const endH = Math.min(startH + 1, END_HOUR);
+    setPreselect({
+      roomId: room.id,
+      startTime: `${String(startH).padStart(2, '0')}:00`,
+      endTime: `${String(endH).padStart(2, '0')}:00`,
+    });
+    setShowAddModal(true);
   };
 
 
@@ -188,9 +211,11 @@ export function RoomReservation() {
               {rooms.map(room => {
                 const roomReservations = getReservationsForRoom(room.id);
                 return (
-                  <div key={room.id} className="h-24 border-b border-neutral-200 relative">
+                  <div key={room.id} className="h-24 border-b border-neutral-200 relative cursor-pointer hover:bg-blue-50/30 transition-colors"
+                    onClick={(e) => handleTimeSlotClick(e, room)}
+                  >
                     {timeSlots.map(hour => (
-                      <div key={hour} className="absolute w-[120px] h-full border-r border-neutral-100" style={{ left: `${(hour - START_HOUR) * 120}px` }} />
+                      <div key={hour} className="absolute w-[120px] h-full border-r border-neutral-100" style={{ left: `${(hour - START_HOUR) * HOUR_WIDTH}px` }} />
                     ))}
                     {roomReservations.map(res => {
                       const pos = getPosition(res.start_at, res.end_at);
@@ -219,7 +244,11 @@ export function RoomReservation() {
         <AddReservationModal
           rooms={rooms}
           selectedDate={selectedDate}
-          onClose={() => setShowAddModal(false)}
+          projectId={projectId}
+          initialRoomId={preselect?.roomId}
+          initialStartTime={preselect?.startTime}
+          initialEndTime={preselect?.endTime}
+          onClose={() => { setShowAddModal(false); setPreselect(null); }}
           onAdd={handleAddReservation}
         />
       )}
@@ -240,36 +269,77 @@ export function RoomReservation() {
 interface AddReservationModalProps {
   rooms: SchoolRoom[];
   selectedDate: string;
+  projectId?: number;
+  initialRoomId?: number;
+  initialStartTime?: string;
+  initialEndTime?: string;
   onClose: () => void;
   onAdd: (data: { roomId: number; start_at: string; end_at: string; purpose: string; attendee_emails: string[] }) => Promise<void>;
 }
 
-function AddReservationModal({ rooms, selectedDate, onClose, onAdd }: AddReservationModalProps) {
+const AVATAR_COLORS = [
+  'bg-red-400', 'bg-blue-400', 'bg-green-400', 'bg-yellow-400',
+  'bg-purple-400', 'bg-pink-400', 'bg-indigo-400', 'bg-orange-400',
+];
+function getAvatarColor(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+function AddReservationModal({ rooms, selectedDate, projectId, initialRoomId, initialStartTime, initialEndTime, onClose, onAdd }: AddReservationModalProps) {
   const [formData, setFormData] = useState({
-    roomId: rooms[0]?.id ?? 0,
+    roomId: initialRoomId ?? rooms[0]?.id ?? 0,
     purpose: '',
-    startTime: '09:00',
-    endTime: '10:00',
+    startTime: initialStartTime ?? '09:00',
+    endTime: initialEndTime ?? '10:00',
     date: selectedDate,
   });
   const [attendeeInput, setAttendeeInput] = useState('');
   const [attendees, setAttendees] = useState<string[]>([]);
+  const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [showMemberDropdown, setShowMemberDropdown] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const attendeeRef = useRef<HTMLDivElement>(null);
 
-  const addAttendee = (email: string) => {
+  useEffect(() => {
+    if (!projectId) return;
+    memberApi.list(projectId)
+      .then(res => setMembers(res.data))
+      .catch(() => setMembers([]));
+  }, [projectId]);
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (attendeeRef.current && !attendeeRef.current.contains(e.target as Node)) {
+        setShowMemberDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, []);
+
+  const addAttendeeEmail = (email: string) => {
     const trimmed = email.trim();
     if (trimmed && !attendees.includes(trimmed)) {
       setAttendees(prev => [...prev, trimmed]);
     }
     setAttendeeInput('');
+    setShowMemberDropdown(false);
   };
 
   const handleAttendeeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if ((e.nativeEvent as InputEvent).isComposing) return;
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
-      addAttendee(attendeeInput);
+      if (attendeeInput.trim()) addAttendeeEmail(attendeeInput);
     }
   };
+
+  const filteredMembers = members.filter(
+    m => !attendees.includes(m.email) &&
+      (m.name.includes(attendeeInput) || m.email.includes(attendeeInput))
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -278,8 +348,8 @@ function AddReservationModal({ rooms, selectedDate, onClose, onAdd }: AddReserva
     try {
       await onAdd({
         roomId: formData.roomId,
-        start_at: `${formData.date}T${formData.startTime}:00`,
-        end_at: `${formData.date}T${formData.endTime}:00`,
+        start_at: `${formData.date}T${formData.startTime}:00+09:00`,
+        end_at: `${formData.date}T${formData.endTime}:00+09:00`,
         purpose: formData.purpose,
         attendee_emails: attendees,
       });
@@ -291,7 +361,7 @@ function AddReservationModal({ rooms, selectedDate, onClose, onAdd }: AddReserva
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
           <h2 className="text-lg">예약 추가</h2>
           <button onClick={onClose} className="p-1 hover:bg-neutral-100 rounded">
@@ -355,30 +425,64 @@ function AddReservationModal({ rooms, selectedDate, onClose, onAdd }: AddReserva
                 />
               </div>
             </div>
-            <div>
+            <div ref={attendeeRef} className="relative">
               <label className="block text-sm mb-1.5">
                 참석자
-                <span className="text-neutral-400 font-normal ml-1">(이메일 입력 후 Enter)</span>
+                <span className="text-neutral-400 font-normal ml-1">(이름 검색 또는 이메일 입력)</span>
               </label>
               {attendees.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">
-                  {attendees.map(email => (
-                    <span key={email} className="flex items-center gap-1 px-2 py-0.5 bg-neutral-100 rounded-full text-xs text-neutral-700">
-                      {email}
-                      <button type="button" onClick={() => setAttendees(prev => prev.filter(e => e !== email))} className="text-neutral-400 hover:text-neutral-700">×</button>
-                    </span>
-                  ))}
+                  {attendees.map(email => {
+                    const m = members.find(mb => mb.email === email);
+                    return (
+                      <span key={email} className="flex items-center gap-1 px-2 py-0.5 bg-neutral-100 rounded-full text-xs text-neutral-700">
+                        {m?.picture
+                          ? <img src={m.picture} alt="" className="w-4 h-4 rounded-full object-cover" />
+                          : m
+                            ? <span className={`w-4 h-4 rounded-full ${getAvatarColor(m.name)} flex items-center justify-center text-white text-[9px]`}>{m.name.charAt(0)}</span>
+                            : null
+                        }
+                        {m?.name ?? email}
+                        <button type="button" onClick={() => setAttendees(prev => prev.filter(e => e !== email))} className="text-neutral-400 hover:text-neutral-700">×</button>
+                      </span>
+                    );
+                  })}
                 </div>
               )}
               <input
-                type="email"
+                type="text"
                 value={attendeeInput}
-                onChange={(e) => setAttendeeInput(e.target.value)}
+                onChange={(e) => { setAttendeeInput(e.target.value); setShowMemberDropdown(true); }}
+                onFocus={() => setShowMemberDropdown(true)}
                 onKeyDown={handleAttendeeKeyDown}
-                onBlur={() => attendeeInput && addAttendee(attendeeInput)}
+                onBlur={() => { if (attendeeInput.trim() && attendeeInput.includes('@')) addAttendeeEmail(attendeeInput); }}
                 className="w-full px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900"
-                placeholder="참석자 이메일 입력"
+                placeholder="이름 검색 또는 이메일 입력"
               />
+              {showMemberDropdown && filteredMembers.length > 0 && (
+                <div className="absolute z-50 top-full mt-1 w-full bg-white border border-neutral-200 rounded-lg shadow-lg">
+                  <ul className="max-h-40 overflow-y-auto py-1">
+                    {filteredMembers.map(m => (
+                      <li key={m.id}>
+                        <button
+                          type="button"
+                          onMouseDown={(e) => { e.preventDefault(); addAttendeeEmail(m.email); }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-neutral-50"
+                        >
+                          {m.picture
+                            ? <img src={m.picture} alt={m.name} className="w-6 h-6 rounded-full object-cover" />
+                            : <div className={`w-6 h-6 rounded-full ${getAvatarColor(m.name)} flex items-center justify-center text-white text-xs`}>{m.name.charAt(0)}</div>
+                          }
+                          <div className="flex-1 text-left min-w-0">
+                            <div className="truncate">{m.name}</div>
+                            <div className="text-xs text-neutral-400 truncate">{m.email}</div>
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <p className="text-xs text-neutral-400 mt-1">구글 캘린더에 참석자 초대가 자동으로 전송됩니다.</p>
             </div>
           </div>

@@ -100,6 +100,12 @@ function AppContent() {
   const [epicsForProject, setEpicsForProject] = useState<ApiEpic[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [initialTaskStatus, setInitialTaskStatus] = useState<Task['status']>('todo');
+
+  const openAddTask = (status: Task['status'] = 'todo') => {
+    setInitialTaskStatus(status);
+    setIsModalOpen(true);
+  };
 
   useEffect(() => {
     if (!selectedProject) return;
@@ -185,7 +191,7 @@ function AppContent() {
               <div className="flex items-center gap-3">
                 {viewMode === "board" && (
                   <button
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={() => openAddTask()}
                     className="flex items-center gap-2 rounded-lg bg-neutral-900 px-4 py-2.5 text-sm text-white hover:bg-neutral-800 transition-colors"
                   >
                     <Plus className="w-4 h-4" />새 작업
@@ -285,6 +291,7 @@ function AppContent() {
                 tasks={tasks}
                 moveTask={moveTask}
                 onTaskClick={setSelectedTask}
+                onAddTask={openAddTask}
               />
             </>
           )}
@@ -301,7 +308,7 @@ function AppContent() {
             />
           )}
           {viewMode === "room" && (
-            <RoomReservation />
+            <RoomReservation projectId={selectedProject.id} />
           )}
           {viewMode === "settings" && (
             <SettingsPage
@@ -318,6 +325,7 @@ function AppContent() {
           onClose={() => setIsModalOpen(false)}
           onAdd={addTask}
           projectId={selectedProject.id}
+          initialStatus={initialTaskStatus}
         />
 
         <TaskDetailModal

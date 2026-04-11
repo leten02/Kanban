@@ -5,9 +5,10 @@ interface KanbanBoardProps {
   tasks: Task[];
   moveTask: (taskId: string, newStatus: Task['status']) => void;
   onTaskClick: (task: Task) => void;
+  onAddTask?: (status: Task['status']) => void;
 }
 
-export function KanbanBoard({ tasks, moveTask, onTaskClick }: KanbanBoardProps) {
+export function KanbanBoard({ tasks, moveTask, onTaskClick, onAddTask }: KanbanBoardProps) {
   const columns: { id: Task['status']; title: string }[] = [
     { id: 'todo', title: 'To Do' },
     { id: 'in-progress', title: 'In Progress' },
@@ -26,6 +27,7 @@ export function KanbanBoard({ tasks, moveTask, onTaskClick }: KanbanBoardProps) 
             tasks={tasks.filter(task => task.status === column.id)}
             moveTask={moveTask}
             onTaskClick={onTaskClick}
+            onAddTask={onAddTask}
           />
         ))}
       </div>

@@ -61,6 +61,7 @@ export function TagPicker({ projectId, value, onChange }: TagPickerProps) {
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if ((e.nativeEvent as InputEvent).isComposing) return;
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
       if (input.trim()) addTag(input);
