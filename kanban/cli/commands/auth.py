@@ -1,7 +1,9 @@
 """Auth commands: login, logout, whoami."""
 from __future__ import annotations
 
+import socket
 import threading
+import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
@@ -18,13 +20,15 @@ from kanban.cli.main import app
 # Internal helpers (patchable in tests)
 # ---------------------------------------------------------------------------
 
-def _get_oauth_url(server_url: str) -> str:
+def _get_oauth_url(server_url: str, callback_port: int | None = None) -> str:
     """Call GET /auth/google/login and return the OAuth redirect URL."""
     import httpx
-    r = httpx.get(f"{server_url.rstrip('/')}/auth/google/login", follow_redirects=False)
+    params = {}
+    if callback_port:
+        params["callback_port"] = callback_port
+    r = httpx.get(f"{server_url.rstrip('/')}/auth/google/login", params=params, follow_redirects=False)
     if r.status_code == 200:
         return r.json()["url"]
-    # Server may return a redirect directly
     if r.status_code in (302, 307):
         return r.headers["location"]
     typer.echo(f"Server error: {r.status_code}", err=True)
@@ -32,7 +36,7 @@ def _get_oauth_url(server_url: str) -> str:
 
 
 def _run_local_callback(port: int = 0) -> dict[str, Any]:
-    """Start a local HTTP server, wait for ?token=&name=&email= callback, return payload."""
+    """Start a local HTTP server on the given port, wait for ?token=&name=&email= callback."""
     result: dict[str, Any] = {}
 
     class Handler(BaseHTTPRequestHandler):
@@ -50,10 +54,8 @@ def _run_local_callback(port: int = 0) -> dict[str, Any]:
             pass
 
     server = HTTPServer(("127.0.0.1", port), Handler)
-    actual_port = server.server_address[1]
-    result["port"] = actual_port
+    result["port"] = server.server_address[1]
 
-    # handle exactly one request then shut down
     server.handle_request()
     server.server_close()
     return result
@@ -68,23 +70,26 @@ def login():
     """Open browser for Google sign-in and save your session locally."""
     server_url = config.get_server_url()
 
-    # Start local callback server on a random port
-    ready = threading.Event()
+    # Pre-allocate a port so we can tell the OAuth backend where to redirect
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("127.0.0.1", 0))
+    port = sock.getsockname()[1]
+    sock.close()
+
     callback_result: dict[str, Any] = {}
+    ready = threading.Event()
 
     def _serve():
-        data = _run_local_callback(port=0)
+        data = _run_local_callback(port=port)
         callback_result.update(data)
         ready.set()
 
     t = threading.Thread(target=_serve, daemon=True)
     t.start()
 
-    # Give the thread a moment to bind the port
-    import time
     time.sleep(0.1)
 
-    oauth_url = _get_oauth_url(server_url)
+    oauth_url = _get_oauth_url(server_url, callback_port=port)
     typer.echo("Opening browser for Google sign-in...")
     webbrowser.open(oauth_url)
 

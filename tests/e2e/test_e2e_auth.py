@@ -26,7 +26,7 @@ def test_login_saves_token_and_shows_user(cli_runner, isolated_config, monkeypat
     """login: OAuth URL fetched, browser opened (mocked), token saved to config."""
     monkeypatch.setattr(
         "kanban.cli.commands.auth._get_oauth_url",
-        lambda url: "https://accounts.google.com/fake-oauth",
+        lambda url, callback_port=None: "https://accounts.google.com/fake-oauth",
     )
     monkeypatch.setattr(
         "kanban.cli.commands.auth._run_local_callback",

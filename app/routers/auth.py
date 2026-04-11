@@ -1,7 +1,11 @@
+import urllib.parse
+
 from fastapi import APIRouter, Depends, HTTPException, Response
+from itsdangerous import URLSafeTimedSerializer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
+from starlette.responses import RedirectResponse
 
 from app.core.config import settings
 from app.core.database import get_db
@@ -10,6 +14,11 @@ from app.models.user import User
 from app.schemas.user import UserOut
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def _make_bearer_token(user_id: int) -> str:
+    signer = URLSafeTimedSerializer(settings.secret_key, salt="cli-token")
+    return signer.dumps(str(user_id))
 
 
 def _get_oauth_client():
@@ -31,17 +40,21 @@ def _get_oauth_client():
 
 
 @router.get("/google/login")
-async def google_login(request: Request):
+async def google_login(request: Request, callback_port: int | None = None):
     oauth = _get_oauth_client()
     redirect_uri = settings.google_redirect_uri
-    # Build the authorization URL without actually redirecting
     google = oauth.create_client("google")
-    # We generate the URL manually so we can return JSON
-    url, _ = google.create_authorization_url(redirect_uri)
+
+    extra = {}
+    if callback_port:
+        extra["state"] = f"port:{callback_port}"
+
+    result = await google.create_authorization_url(redirect_uri, **extra)
+    url = result["url"] if isinstance(result, dict) else result[0]
     return {"url": url}
 
 
-@router.get("/google/callback", response_model=UserOut)
+@router.get("/google/callback")
 async def google_callback(
     request: Request,
     db: AsyncSession = Depends(get_db),
@@ -82,7 +95,21 @@ async def google_callback(
     await db.commit()
     await db.refresh(user)
 
-    response = Response(content=UserOut.model_validate(user).model_dump_json(), media_type="application/json")
+    bearer_token = _make_bearer_token(user.id)
+
+    # Redirect to CLI local server if callback_port was embedded in state
+    state = request.query_params.get("state", "")
+    if state.startswith("port:"):
+        try:
+            port = int(state.split(":", 1)[1])
+            params = urllib.parse.urlencode({"token": bearer_token, "name": name, "email": email})
+            return RedirectResponse(f"http://127.0.0.1:{port}/?{params}")
+        except (ValueError, IndexError):
+            pass
+
+    # Browser-based login: set cookie and return user info
+    from fastapi.responses import JSONResponse
+    response = JSONResponse(content={"id": user.id, "name": name, "email": email, "picture": picture})
     response.set_cookie("session_user_id", str(user.id), httponly=True, samesite="lax")
     return response
 
@@ -97,3 +124,9 @@ async def logout():
 @router.get("/me", response_model=UserOut)
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.get("/token")
+async def get_token(current_user: User = Depends(get_current_user)):
+    """Generate a signed Bearer token for an already-authenticated (cookie) session."""
+    return {"token": _make_bearer_token(current_user.id)}
