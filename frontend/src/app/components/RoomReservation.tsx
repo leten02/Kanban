@@ -11,6 +11,7 @@ export function RoomReservation({ projectId }: { projectId?: number }) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<SchoolReservation | null>(null);
   const [preselect, setPreselect] = useState<{ roomId: number; startTime: string; endTime: string } | null>(null);
+  const [hoverSlot, setHoverSlot] = useState<{ roomId: number; hour: number } | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
@@ -211,12 +212,26 @@ export function RoomReservation({ projectId }: { projectId?: number }) {
               {rooms.map(room => {
                 const roomReservations = getReservationsForRoom(room.id);
                 return (
-                  <div key={room.id} className="h-24 border-b border-neutral-200 relative cursor-pointer hover:bg-blue-50/30 transition-colors"
+                  <div key={room.id} className="h-24 border-b border-neutral-200 relative cursor-pointer"
                     onClick={(e) => handleTimeSlotClick(e, room)}
+                    onMouseMove={(e) => {
+                      if (dragMoved.current || isDragging.current) return;
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const x = e.clientX - rect.left + (scrollRef.current?.scrollLeft ?? 0);
+                      const hour = Math.floor(x / HOUR_WIDTH) + START_HOUR;
+                      setHoverSlot({ roomId: room.id, hour: Math.min(Math.max(hour, START_HOUR), END_HOUR - 1) });
+                    }}
+                    onMouseLeave={() => setHoverSlot(null)}
                   >
                     {timeSlots.map(hour => (
                       <div key={hour} className="absolute w-[120px] h-full border-r border-neutral-100" style={{ left: `${(hour - START_HOUR) * HOUR_WIDTH}px` }} />
                     ))}
+                    {hoverSlot?.roomId === room.id && (
+                      <div
+                        className="absolute top-0 h-full bg-blue-100/60 pointer-events-none transition-[left] duration-75"
+                        style={{ left: `${(hoverSlot.hour - START_HOUR) * HOUR_WIDTH}px`, width: `${HOUR_WIDTH}px` }}
+                      />
+                    )}
                     {roomReservations.map(res => {
                       const pos = getPosition(res.start_at, res.end_at);
                       return (
