@@ -41,8 +41,6 @@ export function RoomReservation() {
   useEffect(() => {
     if (user?.has_school_token) {
       loadData(selectedDate);
-    } else {
-      setShowLinkModal(true);
     }
   }, [user?.has_school_token, selectedDate, loadData]);
 
@@ -98,28 +96,40 @@ export function RoomReservation() {
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   };
 
-  if (showLinkModal) {
-    return <SchoolLinkModal
-      onLink={async (studentId) => {
-        await linkSchool(studentId);
-        await refreshUser();
-        setShowLinkModal(false);
-      }}
-      onSkip={() => setShowLinkModal(false)}
-    />;
-  }
-
-  // 연동 건너뛴 경우 (has_school_token 없음 + 모달 닫음)
+  // 미연동 상태: 흐린 안내 화면 + 오버레이 모달
   if (!user?.has_school_token) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-neutral-400 gap-4">
-        <p className="text-sm">1000school 계정 연동이 필요한 기능입니다.</p>
-        <button
-          onClick={() => setShowLinkModal(true)}
-          className="px-4 py-2 text-sm border border-neutral-300 rounded hover:bg-neutral-50 transition-colors text-neutral-700"
-        >
-          연동하기
-        </button>
+      <div className="relative">
+        {/* 흐린 배경 */}
+        <div className="pointer-events-none select-none opacity-30 bg-white rounded-lg border border-neutral-200 px-6 py-4">
+          <div className="flex items-center gap-4 mb-4">
+            <h2 className="text-lg">회의실 예약</h2>
+          </div>
+          <div className="h-48 bg-neutral-100 rounded" />
+        </div>
+        {/* 안내 오버레이 */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+          <p className="text-sm text-neutral-500">1000school 계정 연동이 필요한 기능입니다.</p>
+          <button
+            onClick={() => setShowLinkModal(true)}
+            className="px-4 py-2 text-sm border border-neutral-300 rounded hover:bg-neutral-50 transition-colors text-neutral-700"
+          >
+            연동하기
+          </button>
+        </div>
+        {/* 연동 모달 */}
+        {showLinkModal && (
+          <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center">
+            <SchoolLinkModal
+              onLink={async (studentId) => {
+                await linkSchool(studentId);
+                await refreshUser();
+                setShowLinkModal(false);
+              }}
+              onSkip={() => setShowLinkModal(false)}
+            />
+          </div>
+        )}
       </div>
     );
   }
