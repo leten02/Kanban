@@ -8,7 +8,7 @@ from app.core.config import settings
 from app.core.database import engine
 from app.models import Base
 from app.models import user, project, epic, task, subtask, meeting_reservation  # noqa: F401
-from app.routers import auth, projects, epics, tasks, subtasks, rooms, teams
+from app.routers import auth, projects, epics, tasks, subtasks, rooms, teams, meeting_rooms
 
 
 @asynccontextmanager
@@ -35,3 +35,4 @@ app.include_router(tasks.router)
 app.include_router(subtasks.router)
 app.include_router(rooms.router)
 app.include_router(teams.router)
+app.include_router(meeting_rooms.router)

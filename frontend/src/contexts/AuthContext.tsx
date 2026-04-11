@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authApi, User } from '../lib/api';
+import { authApi, schoolApi, User } from '../lib/api';
 
 interface AuthContextType {
   user: User | null;
@@ -7,6 +7,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loginWithGoogle: () => void;
   logout: () => Promise<void>;
+  linkSchool: (studentId: string) => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -59,8 +61,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const linkSchool = async (studentId: string) => {
+    await schoolApi.linkAccount(studentId);
+    const res = await authApi.getMe();
+    setUser(res.data);
+  };
+
+  const refreshUser = async () => {
+    if (localStorage.getItem('auth_token')) {
+      try {
+        const res = await authApi.getMe();
+        setUser(res.data);
+      } catch {
+        // ignore
+      }
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, isAuthenticated: !!user, loginWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, isAuthenticated: !!user, loginWithGoogle, logout, linkSchool, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

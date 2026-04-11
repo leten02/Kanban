@@ -52,24 +52,6 @@ export interface Task {
   checklist: ChecklistItem[];
 }
 
-export interface Reservation {
-  id: string;
-  roomId: string;
-  title: string;
-  organizer: string;
-  attendees: string[];
-  startTime: string;
-  endTime: string;
-  date: string;
-}
-
-export interface Room {
-  id: string;
-  name: string;
-  capacity: number;
-  equipment: string[];
-}
-
 type ViewMode =
   | "board"
   | "timeline"
@@ -109,68 +91,6 @@ function AppContent() {
   const [viewMode, setViewMode] = useState<ViewMode>("board");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [epicsForProject, setEpicsForProject] = useState<ApiEpic[]>([]);
-  const [rooms] = useState<Room[]>([
-    {
-      id: "1",
-      name: "대회의실 A",
-      capacity: 20,
-      equipment: ["빔프로젝터", "화이트보드", "화상회의"],
-    },
-    {
-      id: "2",
-      name: "중회의실 B",
-      capacity: 10,
-      equipment: ["모니터", "화이트보드"],
-    },
-    {
-      id: "3",
-      name: "소회의실 C",
-      capacity: 6,
-      equipment: ["모니터"],
-    },
-    {
-      id: "4",
-      name: "소회의실 D",
-      capacity: 4,
-      equipment: ["화이트보드"],
-    },
-  ]);
-
-  const [reservations, setReservations] = useState<
-    Reservation[]
-  >([
-    {
-      id: "1",
-      roomId: "1",
-      title: "주간 전체 회의",
-      organizer: "김개발",
-      attendees: ["김개발", "이디자인", "박데이터", "최백엔드"],
-      startTime: "10:00",
-      endTime: "11:00",
-      date: "2026-04-11",
-    },
-    {
-      id: "2",
-      roomId: "2",
-      title: "UI/UX 리뷰",
-      organizer: "이디자인",
-      attendees: ["이디자인", "박프론트"],
-      startTime: "14:00",
-      endTime: "15:30",
-      date: "2026-04-11",
-    },
-    {
-      id: "3",
-      roomId: "1",
-      title: "스프린트 계획 미팅",
-      organizer: "최백엔드",
-      attendees: ["김개발", "최백엔드", "박데이터"],
-      startTime: "15:00",
-      endTime: "16:00",
-      date: "2026-04-11",
-    },
-  ]);
-
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -228,15 +148,6 @@ function AppContent() {
     if (updates.status) {
       taskApi.updateStatus(Number(taskId), toApiStatus(updates.status)).catch(console.error);
     }
-  };
-
-  const addReservation = (newReservation: Omit<Reservation, "id">) => {
-    const reservation: Reservation = { ...newReservation, id: Date.now().toString() };
-    setReservations((prev) => [...prev, reservation]);
-  };
-
-  const deleteReservation = (reservationId: string) => {
-    setReservations((prev) => prev.filter((r) => r.id !== reservationId));
   };
 
   return (
@@ -370,12 +281,7 @@ function AppContent() {
             />
           )}
           {viewMode === "room" && (
-            <RoomReservation
-              rooms={rooms}
-              reservations={reservations}
-              onAddReservation={addReservation}
-              onDeleteReservation={deleteReservation}
-            />
+            <RoomReservation />
           )}
         </main>
 

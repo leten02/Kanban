@@ -34,6 +34,7 @@ export interface User {
   email: string;
   name: string;
   picture?: string;
+  has_school_token?: boolean;
 }
 
 export interface Project {
@@ -166,6 +167,38 @@ export const subtaskApi = {
     is_completed?: boolean | null;
   }) => api.patch<Subtask>(`/subtasks/${id}`, data),
   delete: (id: number) => api.delete(`/subtasks/${id}`),
+};
+
+export interface SchoolRoom {
+  id: number;
+  name: string;
+  location?: string;
+  description?: string;
+  image_url?: string;
+}
+
+export interface SchoolReservation {
+  id: number;
+  meeting_room_id: number;
+  reserved_by_user_id: number;
+  reserved_by_name: string;
+  start_at: string;
+  end_at: string;
+  purpose?: string;
+  can_cancel: boolean;
+}
+
+export const schoolApi = {
+  linkAccount: (studentId: string) =>
+    api.post<{ ok: boolean; has_school_token: boolean }>('/auth/1000school/link', { student_id: studentId }),
+  listRooms: () =>
+    api.get<SchoolRoom[]>('/api/meeting-rooms'),
+  listReservations: (roomId: number, date: string) =>
+    api.get<SchoolReservation[]>(`/api/meeting-rooms/${roomId}/reservations`, { params: { date } }),
+  createReservation: (roomId: number, data: { start_at: string; end_at: string; purpose?: string }) =>
+    api.post<SchoolReservation>(`/api/meeting-rooms/${roomId}/reservations`, data),
+  deleteReservation: (reservationId: number) =>
+    api.delete(`/api/meeting-rooms/reservations/${reservationId}`),
 };
 
 export const roomApi = {
