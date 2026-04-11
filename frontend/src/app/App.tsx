@@ -225,6 +225,9 @@ function AppContent() {
 
   const updateTask = (taskId: string, updates: Partial<Task>) => {
     setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, ...updates } : t));
+    if (updates.status) {
+      taskApi.updateStatus(Number(taskId), toApiStatus(updates.status)).catch(console.error);
+    }
   };
 
   const addReservation = (newReservation: Omit<Reservation, "id">) => {
