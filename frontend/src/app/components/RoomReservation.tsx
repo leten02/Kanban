@@ -105,7 +105,23 @@ export function RoomReservation() {
         await refreshUser();
         setShowLinkModal(false);
       }}
+      onSkip={() => setShowLinkModal(false)}
     />;
+  }
+
+  // 연동 건너뛴 경우 (has_school_token 없음 + 모달 닫음)
+  if (!user?.has_school_token) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-neutral-400 gap-4">
+        <p className="text-sm">1000school 계정 연동이 필요한 기능입니다.</p>
+        <button
+          onClick={() => setShowLinkModal(true)}
+          className="px-4 py-2 text-sm border border-neutral-300 rounded hover:bg-neutral-50 transition-colors text-neutral-700"
+        >
+          연동하기
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -226,7 +242,7 @@ export function RoomReservation() {
   );
 }
 
-function SchoolLinkModal({ onLink }: { onLink: (studentId: string) => Promise<void> }) {
+function SchoolLinkModal({ onLink, onSkip }: { onLink: (studentId: string) => Promise<void>; onSkip: () => void }) {
   const [studentId, setStudentId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -254,8 +270,8 @@ function SchoolLinkModal({ onLink }: { onLink: (studentId: string) => Promise<vo
           <h3 className="text-lg">1000school 계정 연동</h3>
         </div>
         <p className="text-sm text-neutral-600 mb-6">
-          회의실 예약 기능을 사용하려면 1000school 계정 연동이 필요합니다.
-          Google 계정에 연결된 학번을 입력하세요.
+          회의실 예약 기능을 사용하려면 1000school(gachon.ac.kr) 계정 연동이 필요합니다.
+          학번을 입력하면 자동으로 연동됩니다.
         </p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -282,6 +298,13 @@ function SchoolLinkModal({ onLink }: { onLink: (studentId: string) => Promise<vo
           >
             {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
             연동하기
+          </button>
+          <button
+            type="button"
+            onClick={onSkip}
+            className="w-full px-4 py-2 text-sm text-neutral-500 hover:text-neutral-700 transition-colors"
+          >
+            1000school 계정이 없어요 (회의실 기능 건너뛰기)
           </button>
         </form>
       </div>
