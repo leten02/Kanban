@@ -189,8 +189,8 @@ export interface SchoolReservation {
 }
 
 export const schoolApi = {
-  linkAccount: (studentId: string) =>
-    api.post<{ ok: boolean; has_school_token: boolean }>('/auth/1000school/link', { student_id: studentId }),
+  linkAccount: (apiToken: string) =>
+    api.post<{ ok: boolean; has_school_token: boolean }>('/auth/1000school/link', { api_token: apiToken }),
   listRooms: () =>
     api.get<SchoolRoom[]>('/api/meeting-rooms'),
   listReservations: (roomId: number, date: string) =>

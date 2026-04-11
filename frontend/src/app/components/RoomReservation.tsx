@@ -252,21 +252,21 @@ export function RoomReservation() {
   );
 }
 
-function SchoolLinkModal({ onLink, onSkip }: { onLink: (studentId: string) => Promise<void>; onSkip: () => void }) {
-  const [studentId, setStudentId] = useState('');
+function SchoolLinkModal({ onLink, onSkip }: { onLink: (token: string) => Promise<void>; onSkip: () => void }) {
+  const [apiToken, setApiToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!studentId.trim()) return;
+    if (!apiToken.trim()) return;
     setIsLoading(true);
     setError('');
     try {
-      await onLink(studentId.trim());
+      await onLink(apiToken.trim());
     } catch (e: unknown) {
       const err = e as { response?: { data?: { detail?: string } } };
-      setError(err?.response?.data?.detail || '연동 실패. 이메일 또는 학번을 확인하세요.');
+      setError(err?.response?.data?.detail || '유효하지 않은 토큰입니다.');
     } finally {
       setIsLoading(false);
     }
@@ -279,19 +279,23 @@ function SchoolLinkModal({ onLink, onSkip }: { onLink: (studentId: string) => Pr
           <Link className="w-5 h-5 text-neutral-700" />
           <h3 className="text-lg">1000school 계정 연동</h3>
         </div>
-        <p className="text-sm text-neutral-600 mb-6">
-          회의실 예약 기능을 사용하려면 1000school(gachon.ac.kr) 계정 연동이 필요합니다.
-          학번을 입력하면 자동으로 연동됩니다.
+        <p className="text-sm text-neutral-600 mb-2">
+          회의실 예약 기능을 사용하려면 1000school API 토큰이 필요합니다.
         </p>
+        <ol className="text-xs text-neutral-500 mb-6 space-y-1 list-decimal list-inside">
+          <li><a href="https://1000.school" target="_blank" rel="noreferrer" className="underline">1000.school</a> 에 로그인</li>
+          <li>프로필 → API 토큰 발급</li>
+          <li>아래에 붙여넣기</li>
+        </ol>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm mb-1.5">학번</label>
+            <label className="block text-sm mb-1.5">API 토큰</label>
             <input
               type="text"
-              value={studentId}
-              onChange={(e) => setStudentId(e.target.value)}
-              className="w-full px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900"
-              placeholder="예: 202112345"
+              value={apiToken}
+              onChange={(e) => setApiToken(e.target.value)}
+              className="w-full px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900 font-mono"
+              placeholder="토큰을 붙여넣으세요"
               required
             />
           </div>
@@ -314,7 +318,7 @@ function SchoolLinkModal({ onLink, onSkip }: { onLink: (studentId: string) => Pr
             onClick={onSkip}
             className="w-full px-4 py-2 text-sm text-neutral-500 hover:text-neutral-700 transition-colors"
           >
-            1000school 계정이 없어요 (회의실 기능 건너뛰기)
+            나중에 하기
           </button>
         </form>
       </div>

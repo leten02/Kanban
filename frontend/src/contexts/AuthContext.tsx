@@ -7,7 +7,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loginWithGoogle: () => void;
   logout: () => Promise<void>;
-  linkSchool: (studentId: string) => Promise<void>;
+  linkSchool: (apiToken: string) => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
@@ -61,8 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
-  const linkSchool = async (studentId: string) => {
-    await schoolApi.linkAccount(studentId);
+  const linkSchool = async (apiToken: string) => {
+    await schoolApi.linkAccount(apiToken);
     const res = await authApi.getMe();
     setUser(res.data);
   };

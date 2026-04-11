@@ -130,7 +130,7 @@ from pydantic import BaseModel
 
 
 class SchoolLinkRequest(BaseModel):
-    student_id: str
+    api_token: str
 
 
 @router.post("/1000school/link")
@@ -139,41 +139,21 @@ async def link_school(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """1000school fallback 로그인 → API 토큰 발급 → DB 저장"""
+    """1000school API 토큰 검증 후 DB 저장"""
     import httpx
 
     SCHOOL_API = "https://api.1000.school"
 
-    async with httpx.AsyncClient(follow_redirects=True) as client:
-        # 1. Fallback 로그인 (email + student_id) → 세션 쿠키
-        r = await client.post(
-            f"{SCHOOL_API}/auth/fallback",
-            json={"email": current_user.email, "student_id": req.student_id},
+    async with httpx.AsyncClient() as client:
+        # 토큰 유효성 검증
+        r = await client.get(
+            f"{SCHOOL_API}/auth/me",
+            headers={"Authorization": f"Bearer {req.api_token}"},
         )
         if r.status_code != 200:
-            raise HTTPException(400, "1000school 로그인 실패. 이메일 또는 학번을 확인하세요.")
+            raise HTTPException(400, "유효하지 않은 1000school API 토큰입니다.")
 
-        # 2. CSRF 토큰 획득
-        csrf_r = await client.get(f"{SCHOOL_API}/auth/csrf", cookies=r.cookies)
-        csrf_token = csrf_r.json().get("csrf_token", "") if csrf_r.status_code == 200 else ""
-
-        # 3. API 토큰 발급
-        headers = {"X-CSRF-Token": csrf_token} if csrf_token else {}
-        t = await client.post(
-            f"{SCHOOL_API}/auth/tokens",
-            json={"description": "kanban-app"},
-            cookies=r.cookies,
-            headers=headers,
-        )
-        if t.status_code != 200:
-            raise HTTPException(500, f"1000school 토큰 발급 실패: {t.text}")
-
-        token_data = t.json()
-        school_token = token_data.get("token")
-        if not school_token:
-            raise HTTPException(500, "토큰 값을 받지 못했습니다")
-
-    current_user.school_api_token = school_token
+    current_user.school_api_token = req.api_token
     await db.commit()
 
     return {"ok": True, "has_school_token": True}
