@@ -1,0 +1,197 @@
+import { useState } from 'react';
+import { Task } from '../App';
+import { X } from 'lucide-react';
+
+interface AddTaskModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onAdd: (task: Omit<Task, 'id'>) => void;
+}
+
+export function AddTaskModal({ isOpen, onClose, onAdd }: AddTaskModalProps) {
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    assignees: '',
+    priority: 'medium' as Task['priority'],
+    startDate: '',
+    dueDate: '',
+    status: 'todo' as Task['status'],
+    tags: ''
+  });
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.title || !formData.assignees || !formData.dueDate) {
+      return;
+    }
+
+    onAdd({
+      title: formData.title,
+      description: formData.description,
+      assignees: formData.assignees.split(',').map(a => a.trim()).filter(a => a),
+      priority: formData.priority,
+      startDate: formData.startDate,
+      dueDate: formData.dueDate,
+      status: formData.status,
+      tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+      comments: [],
+      checklist: []
+    });
+
+    setFormData({
+      title: '',
+      description: '',
+      assignees: '',
+      priority: 'medium',
+      startDate: '',
+      dueDate: '',
+      status: 'todo',
+      tags: ''
+    });
+
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div
+        className="absolute inset-0 bg-black/50"
+        onClick={onClose}
+      />
+
+      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
+          <h2 className="text-lg">새 작업 추가</h2>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-neutral-100 rounded transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm mb-1.5">작업 제목 *</label>
+              <input
+                type="text"
+                value={formData.title}
+                onChange={e => setFormData({ ...formData, title: e.target.value })}
+                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                placeholder="작업 제목을 입력하세요"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm mb-1.5">설명</label>
+              <textarea
+                value={formData.description}
+                onChange={e => setFormData({ ...formData, description: e.target.value })}
+                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent resize-none"
+                placeholder="작업에 대한 설명을 입력하세요"
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm mb-1.5">담당자 *</label>
+              <input
+                type="text"
+                value={formData.assignees}
+                onChange={e => setFormData({ ...formData, assignees: e.target.value })}
+                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                placeholder="쉼표로 구분하여 입력 (예: 김개발, 이디자인)"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm mb-1.5">시작일</label>
+                <input
+                  type="date"
+                  value={formData.startDate}
+                  onChange={e => setFormData({ ...formData, startDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm mb-1.5">마감일 *</label>
+                <input
+                  type="date"
+                  value={formData.dueDate}
+                  onChange={e => setFormData({ ...formData, dueDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm mb-1.5">우선순위</label>
+                <select
+                  value={formData.priority}
+                  onChange={e => setFormData({ ...formData, priority: e.target.value as Task['priority'] })}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                >
+                  <option value="low">낮음</option>
+                  <option value="medium">보통</option>
+                  <option value="high">높음</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm mb-1.5">상태</label>
+                <select
+                  value={formData.status}
+                  onChange={e => setFormData({ ...formData, status: e.target.value as Task['status'] })}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                >
+                  <option value="todo">할 일</option>
+                  <option value="in-progress">진행 중</option>
+                  <option value="review">검토</option>
+                  <option value="done">완료</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm mb-1.5">태그</label>
+              <input
+                type="text"
+                value={formData.tags}
+                onChange={e => setFormData({ ...formData, tags: e.target.value })}
+                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                placeholder="쉼표로 구분하여 입력 (예: Frontend, Design)"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 mt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors"
+            >
+              취소
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors"
+            >
+              추가
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

@@ -32,3 +32,4 @@ htmlcov/
 
 # Supabase temp
 supabase/.temp/
+.gstack/
