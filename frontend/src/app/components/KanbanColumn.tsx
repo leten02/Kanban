@@ -41,11 +41,12 @@ export function KanbanColumn({ status, title, tasks, moveTask, onTaskClick, onAd
 
       <div
         ref={drop}
-        className={`flex-1 rounded transition-colors min-h-[calc(100vh-280px)] p-2 ${
-          isOver ? 'bg-neutral-100' : 'bg-neutral-50'
+        className={`flex-1 rounded transition-colors min-h-[calc(100vh-280px)] p-2 cursor-pointer ${
+          isOver ? 'bg-neutral-100' : 'bg-neutral-50 hover:bg-neutral-100/70'
         }`}
+        onClick={() => onAddTask?.(status)}
       >
-        <div className="space-y-2">
+        <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
           {tasks.map(task => (
             <TaskCard
               key={task.id}
@@ -54,6 +55,12 @@ export function KanbanColumn({ status, title, tasks, moveTask, onTaskClick, onAd
             />
           ))}
         </div>
+        {tasks.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-24 text-neutral-300 gap-1 select-none">
+            <Plus className="w-5 h-5" />
+            <span className="text-xs">클릭해서 추가</span>
+          </div>
+        )}
       </div>
     </div>
   );

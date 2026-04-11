@@ -46,7 +46,7 @@ export function AssigneePicker({ projectId, value, onChange }: AssigneePickerPro
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    memberApi.assigneeSuggestions(projectId)
+    memberApi.list(projectId)
       .then(res => setMembers(res.data))
       .catch(() => setMembers([]));
   }, [projectId]);

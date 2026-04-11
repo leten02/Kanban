@@ -158,7 +158,7 @@ async def assignee_suggestions(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Count how many tasks each member has been assigned in this project
+    # Return members ordered by how many tasks they've been assigned in this project
     count_col = func.count(Task.id).label("assignment_count")
     result = await db.execute(
         select(ProjectMember, count_col)
@@ -169,7 +169,7 @@ async def assignee_suggestions(
         )
         .where(ProjectMember.project_id == project_id)
         .group_by(ProjectMember.id)
-        .order_by(count_col.desc())
+        .order_by(count_col.desc(), ProjectMember.name)
     )
     rows = result.all()
     return [row[0] for row in rows]
