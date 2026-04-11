@@ -1,23 +1,27 @@
 import { useState } from 'react';
 import { Task } from '../App';
 import { X } from 'lucide-react';
+import { AssigneePicker } from './AssigneePicker';
+import { TagPicker } from './TagPicker';
 
 interface AddTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAdd: (task: Omit<Task, 'id'>) => void;
+  projectId: number;
 }
 
-export function AddTaskModal({ isOpen, onClose, onAdd }: AddTaskModalProps) {
+export function AddTaskModal({ isOpen, onClose, onAdd, projectId }: AddTaskModalProps) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    assignees: '',
+    assignee_member_id: null as number | null,
+    assignee_name: null as string | null,
     priority: 'medium' as Task['priority'],
     startDate: '',
     dueDate: '',
     status: 'todo' as Task['status'],
-    tags: ''
+    tags: [] as string[],
   });
 
   if (!isOpen) return null;
@@ -25,32 +29,35 @@ export function AddTaskModal({ isOpen, onClose, onAdd }: AddTaskModalProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.title || !formData.assignees || !formData.dueDate) {
+    if (!formData.title || !formData.dueDate) {
       return;
     }
 
     onAdd({
       title: formData.title,
       description: formData.description,
-      assignees: formData.assignees.split(',').map(a => a.trim()).filter(a => a),
+      assignees: formData.assignee_name ? [formData.assignee_name] : [],
+      assignee_member_id: formData.assignee_member_id,
+      assignee_name: formData.assignee_name,
       priority: formData.priority,
       startDate: formData.startDate,
       dueDate: formData.dueDate,
       status: formData.status,
-      tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+      tags: formData.tags,
       comments: [],
-      checklist: []
+      checklist: [],
     });
 
     setFormData({
       title: '',
       description: '',
-      assignees: '',
+      assignee_member_id: null,
+      assignee_name: null,
       priority: 'medium',
       startDate: '',
       dueDate: '',
       status: 'todo',
-      tags: ''
+      tags: [],
     });
 
     onClose();
@@ -100,14 +107,13 @@ export function AddTaskModal({ isOpen, onClose, onAdd }: AddTaskModalProps) {
             </div>
 
             <div>
-              <label className="block text-sm mb-1.5">담당자 *</label>
-              <input
-                type="text"
-                value={formData.assignees}
-                onChange={e => setFormData({ ...formData, assignees: e.target.value })}
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
-                placeholder="쉼표로 구분하여 입력 (예: 김개발, 이디자인)"
-                required
+              <label className="block text-sm mb-1.5">담당자</label>
+              <AssigneePicker
+                projectId={projectId}
+                value={formData.assignee_member_id}
+                onChange={(memberId, memberName) =>
+                  setFormData({ ...formData, assignee_member_id: memberId, assignee_name: memberName })
+                }
               />
             </div>
 
@@ -165,12 +171,10 @@ export function AddTaskModal({ isOpen, onClose, onAdd }: AddTaskModalProps) {
 
             <div>
               <label className="block text-sm mb-1.5">태그</label>
-              <input
-                type="text"
+              <TagPicker
+                projectId={projectId}
                 value={formData.tags}
-                onChange={e => setFormData({ ...formData, tags: e.target.value })}
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
-                placeholder="쉼표로 구분하여 입력 (예: Frontend, Design)"
+                onChange={tags => setFormData({ ...formData, tags })}
               />
             </div>
           </div>

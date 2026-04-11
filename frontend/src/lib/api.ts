@@ -67,7 +67,10 @@ export interface Task {
   status: 'todo' | 'in_progress' | 'in_review' | 'done';
   priority: 'low' | 'medium' | 'high';
   assignee_user_id: number | null;
+  assignee_member_id: number | null;
+  assignee_name: string | null;
   due_date: string | null;
+  tags: string[];
 }
 
 export interface Subtask {
@@ -143,15 +146,19 @@ export const taskApi = {
     title: string;
     description?: string | null;
     assignee_user_id?: number | null;
+    assignee_member_id?: number | null;
     priority?: 'low' | 'medium' | 'high';
     due_date?: string | null;
+    tags?: string[];
   }) => api.post<Task>(`/epics/${epicId}/tasks`, data),
   update: (id: number, data: {
     title?: string | null;
     description?: string | null;
     assignee_user_id?: number | null;
+    assignee_member_id?: number | null;
     priority?: 'low' | 'medium' | 'high' | null;
     due_date?: string | null;
+    tags?: string[] | null;
   }) => api.patch<Task>(`/tasks/${id}`, data),
   updateStatus: (id: number, status: Task['status']) =>
     api.patch<Task>(`/tasks/${id}/status`, { status }),
@@ -202,6 +209,31 @@ export const schoolApi = {
     api.post<SchoolReservation>(`/api/meeting-rooms/${roomId}/reservations`, data),
   deleteReservation: (reservationId: number) =>
     api.delete(`/api/meeting-rooms/reservations/${reservationId}`),
+};
+
+export interface ProjectMember {
+  id: number;
+  project_id: number;
+  school_user_id: number;
+  name: string;
+  email: string;
+  picture: string | null;
+  role: string;
+}
+
+export const memberApi = {
+  list: (projectId: number) =>
+    api.get<ProjectMember[]>(`/api/projects/${projectId}/members`),
+  sync: (projectId: number) =>
+    api.post<ProjectMember[]>(`/api/projects/${projectId}/members/sync`),
+  updateRole: (projectId: number, memberId: number, role: string) =>
+    api.patch(`/api/projects/${projectId}/members/${memberId}`, { role }),
+  remove: (projectId: number, memberId: number) =>
+    api.delete(`/api/projects/${projectId}/members/${memberId}`),
+  assigneeSuggestions: (projectId: number) =>
+    api.get<ProjectMember[]>(`/api/projects/${projectId}/assignee-suggestions`),
+  tags: (projectId: number) =>
+    api.get<string[]>(`/api/projects/${projectId}/tags`),
 };
 
 export const roomApi = {

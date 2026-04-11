@@ -13,6 +13,8 @@ class Task(Base):
     status = Column(String, nullable=False, default="todo", server_default="todo")
     priority = Column(String, nullable=False, default="medium", server_default="medium")
     assignee_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    assignee_member_id = Column(Integer, ForeignKey("project_members.id", ondelete="SET NULL"), nullable=True)
+    assignee_name = Column(String, nullable=True)
     start_date = Column(Date, nullable=True)
     due_date = Column(Date, nullable=True)
     display_order = Column(Integer, nullable=False, default=0, server_default="0")

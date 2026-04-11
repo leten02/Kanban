@@ -7,6 +7,7 @@ import { TimelineView } from "./components/TimelineView";
 import { RoomReservation } from "./components/RoomReservation";
 import { AddTaskModal } from "./components/AddTaskModal";
 import { TaskDetailModal } from "./components/TaskDetailModal";
+import { SettingsPage } from "./components/SettingsPage";
 import { Login } from "../components/Login";
 import { ProjectDashboard } from "../components/ProjectDashboard";
 import { EpicManagement } from "../components/EpicManagement";
@@ -23,6 +24,7 @@ import {
   Target,
   ArrowLeft,
   FileText,
+  Settings,
 } from "lucide-react";
 
 export interface Comment {
@@ -43,6 +45,8 @@ export interface Task {
   title: string;
   description: string;
   assignees: string[];
+  assignee_member_id?: number | null;
+  assignee_name?: string | null;
   priority: "low" | "medium" | "high";
   dueDate: string;
   startDate?: string;
@@ -57,7 +61,8 @@ type ViewMode =
   | "timeline"
   | "room"
   | "epic"
-  | "document";
+  | "document"
+  | "settings";
 
 const toFrontendStatus = (s: string): Task["status"] => {
   if (s === "in_progress") return "in-progress";
@@ -75,12 +80,14 @@ const apiTaskToFrontend = (t: ApiTask): Task => ({
   id: String(t.id),
   title: t.title,
   description: t.description || "",
-  assignees: [],
+  assignees: t.assignee_name ? [t.assignee_name] : [],
+  assignee_member_id: t.assignee_member_id,
+  assignee_name: t.assignee_name,
   priority: t.priority || "medium",
   startDate: undefined,
   dueDate: t.due_date || "",
   status: toFrontendStatus(t.status),
-  tags: [],
+  tags: t.tags || [],
   comments: [],
   checklist: [],
 });
@@ -134,6 +141,8 @@ function AppContent() {
       description: newTask.description || null,
       priority: newTask.priority,
       due_date: newTask.dueDate || null,
+      assignee_member_id: newTask.assignee_member_id ?? null,
+      tags: newTask.tags || [],
     });
     setTasks((prev) => [...prev, apiTaskToFrontend(res.data)]);
   };
@@ -250,6 +259,17 @@ function AppContent() {
                 <DoorOpen className="w-4 h-4" />
                 회의실 예약
               </button>
+              <button
+                onClick={() => setViewMode("settings")}
+                className={`flex items-center gap-2 px-4 py-3 text-sm border-b-2 transition-colors ${
+                  viewMode === "settings"
+                    ? "border-neutral-900 text-neutral-900"
+                    : "border-transparent text-neutral-500 hover:text-neutral-900"
+                }`}
+              >
+                <Settings className="w-4 h-4" />
+                설정
+              </button>
             </div>
           </div>
         </header>
@@ -283,12 +303,21 @@ function AppContent() {
           {viewMode === "room" && (
             <RoomReservation />
           )}
+          {viewMode === "settings" && (
+            <SettingsPage
+              projectId={selectedProject.id}
+              projectName={selectedProject.name}
+              projectDescription={selectedProject.description}
+              onDeleteProject={() => setSelectedProject(null)}
+            />
+          )}
         </main>
 
         <AddTaskModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onAdd={addTask}
+          projectId={selectedProject.id}
         />
 
         <TaskDetailModal

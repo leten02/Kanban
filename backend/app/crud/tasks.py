@@ -1,18 +1,44 @@
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.task import Task
+from app.models.task_tag import TaskTag
+from app.models.project_member import ProjectMember
 from app.schemas.task import TaskCreate, TaskUpdate
+
+
+async def _task_to_dict(db: AsyncSession, task: Task) -> dict:
+    result = await db.execute(select(TaskTag.tag).where(TaskTag.task_id == task.id))
+    tags = list(result.scalars().all())
+    d = {col.name: getattr(task, col.name) for col in Task.__table__.columns}
+    d["tags"] = tags
+    return d
+
+
+async def _set_tags(db: AsyncSession, task_id: int, tags: list[str]) -> None:
+    await db.execute(delete(TaskTag).where(TaskTag.task_id == task_id))
+    for tag in tags:
+        tag = tag.strip()
+        if tag:
+            db.add(TaskTag(task_id=task_id, tag=tag))
+
+
+async def _get_member_name(db: AsyncSession, member_id: int) -> str | None:
+    result = await db.execute(
+        select(ProjectMember.name).where(ProjectMember.id == member_id)
+    )
+    return result.scalar_one_or_none()
 
 
 async def get_tasks(
     db: AsyncSession, project_id: int, status: str | None = None
-) -> list[Task]:
+) -> list[dict]:
     query = select(Task).where(Task.project_id == project_id)
     if status is not None:
         query = query.where(Task.status == status)
     result = await db.execute(query)
-    return list(result.scalars().all())
+    tasks = list(result.scalars().all())
+    return [await _task_to_dict(db, t) for t in tasks]
 
 
 async def get_task(db: AsyncSession, task_id: int) -> Task | None:
@@ -26,37 +52,59 @@ async def create_task(
     project_id: int,
     data: TaskCreate,
     user_id: int,
-) -> Task:
+) -> dict:
+    assignee_name = None
+    if data.assignee_member_id is not None:
+        assignee_name = await _get_member_name(db, data.assignee_member_id)
+
     task = Task(
         epic_id=epic_id,
         project_id=project_id,
         title=data.title,
         description=data.description,
         assignee_user_id=data.assignee_user_id,
+        assignee_member_id=data.assignee_member_id,
+        assignee_name=assignee_name,
         priority=data.priority,
         due_date=data.due_date,
         created_by_user_id=user_id,
     )
     db.add(task)
+    await db.flush()
+    await _set_tags(db, task.id, data.tags)
     await db.commit()
     await db.refresh(task)
-    return task
+    return await _task_to_dict(db, task)
 
 
-async def update_task(db: AsyncSession, task: Task, data: TaskUpdate) -> Task:
-    update_data = data.model_dump(exclude_none=True)
+async def update_task(db: AsyncSession, task: Task, data: TaskUpdate) -> dict:
+    update_data = data.model_dump(exclude_unset=True)
+
+    tags = update_data.pop("tags", None)
+
+    if "assignee_member_id" in update_data:
+        member_id = update_data["assignee_member_id"]
+        if member_id is not None:
+            update_data["assignee_name"] = await _get_member_name(db, member_id)
+        else:
+            update_data["assignee_name"] = None
+
     for field, value in update_data.items():
         setattr(task, field, value)
+
+    if tags is not None:
+        await _set_tags(db, task.id, tags)
+
     await db.commit()
     await db.refresh(task)
-    return task
+    return await _task_to_dict(db, task)
 
 
-async def update_task_status(db: AsyncSession, task: Task, status: str) -> Task:
+async def update_task_status(db: AsyncSession, task: Task, status: str) -> dict:
     task.status = status
     await db.commit()
     await db.refresh(task)
-    return task
+    return await _task_to_dict(db, task)
 
 
 async def delete_task(db: AsyncSession, task: Task) -> None:

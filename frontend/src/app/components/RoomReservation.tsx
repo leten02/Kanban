@@ -69,7 +69,9 @@ export function RoomReservation() {
     }
   };
 
-  const timeSlots = Array.from({ length: 10 }, (_, i) => i + 9);
+  const START_HOUR = 9;
+  const END_HOUR = 24;
+  const timeSlots = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => i + START_HOUR);
 
   const getReservationsForRoom = (roomId: number) =>
     reservations.filter(r => r.meeting_room_id === roomId && r.start_at.startsWith(selectedDate));
@@ -77,8 +79,8 @@ export function RoomReservation() {
   const getPosition = (start_at: string, end_at: string) => {
     const s = new Date(start_at);
     const e = new Date(end_at);
-    const startPos = (s.getHours() - 9) * 120 + (s.getMinutes() / 60) * 120;
-    const endPos = (e.getHours() - 9) * 120 + (e.getMinutes() / 60) * 120;
+    const startPos = (s.getHours() - START_HOUR) * 120 + (s.getMinutes() / 60) * 120;
+    const endPos = (e.getHours() - START_HOUR) * 120 + (e.getMinutes() / 60) * 120;
     return { left: startPos, width: endPos - startPos };
   };
 
@@ -159,7 +161,7 @@ export function RoomReservation() {
                 return (
                   <div key={room.id} className="h-24 border-b border-neutral-200 relative">
                     {timeSlots.map(hour => (
-                      <div key={hour} className="absolute w-[120px] h-full border-r border-neutral-100" style={{ left: `${(hour - 9) * 120}px` }} />
+                      <div key={hour} className="absolute w-[120px] h-full border-r border-neutral-100" style={{ left: `${(hour - START_HOUR) * 120}px` }} />
                     ))}
                     {roomReservations.map(res => {
                       const pos = getPosition(res.start_at, res.end_at);

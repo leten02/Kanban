@@ -18,15 +18,13 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
 
   const getAvatarColor = (name: string) => {
     const colors = [
-      'bg-blue-500',
-      'bg-green-500',
-      'bg-purple-500',
-      'bg-pink-500',
-      'bg-amber-500',
-      'bg-cyan-500'
+      'bg-red-400', 'bg-blue-400', 'bg-green-400', 'bg-yellow-400',
+      'bg-purple-400', 'bg-pink-400', 'bg-indigo-400', 'bg-orange-400',
+      'bg-teal-400', 'bg-cyan-400',
     ];
-    const index = name.charCodeAt(0) % colors.length;
-    return colors[index];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return colors[Math.abs(hash) % colors.length];
   };
 
   const getInitials = (name: string) => {
@@ -79,19 +77,30 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
           )}
         </div>
         <div className="flex -space-x-1">
-          {task.assignees.slice(0, 3).map((assignee, idx) => (
+          {task.assignee_name ? (
             <div
-              key={idx}
-              className={`w-6 h-6 rounded-full ${getAvatarColor(assignee)} flex items-center justify-center text-xs text-white font-medium border-2 border-white`}
-              title={assignee}
+              className={`w-6 h-6 rounded-full ${getAvatarColor(task.assignee_name)} flex items-center justify-center text-xs text-white font-medium border-2 border-white`}
+              title={task.assignee_name}
             >
-              {getInitials(assignee)}
+              {task.assignee_name.charAt(0)}
             </div>
-          ))}
-          {task.assignees.length > 3 && (
-            <div className="w-6 h-6 rounded-full bg-neutral-400 flex items-center justify-center text-xs text-white font-medium border-2 border-white">
-              +{task.assignees.length - 3}
-            </div>
+          ) : (
+            <>
+              {task.assignees.slice(0, 3).map((assignee, idx) => (
+                <div
+                  key={idx}
+                  className={`w-6 h-6 rounded-full ${getAvatarColor(assignee)} flex items-center justify-center text-xs text-white font-medium border-2 border-white`}
+                  title={assignee}
+                >
+                  {getInitials(assignee)}
+                </div>
+              ))}
+              {task.assignees.length > 3 && (
+                <div className="w-6 h-6 rounded-full bg-neutral-400 flex items-center justify-center text-xs text-white font-medium border-2 border-white">
+                  +{task.assignees.length - 3}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
