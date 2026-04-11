@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authApi, schoolApi, User } from '../lib/api';
+import { authApi, User } from '../lib/api';
 
 interface AuthContextType {
   user: User | null;
@@ -7,7 +7,6 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loginWithGoogle: () => void;
   logout: () => Promise<void>;
-  linkSchool: (apiToken: string) => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
@@ -61,12 +60,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
-  const linkSchool = async (apiToken: string) => {
-    await schoolApi.linkAccount(apiToken);
-    const res = await authApi.getMe();
-    setUser(res.data);
-  };
-
   const refreshUser = async () => {
     if (localStorage.getItem('auth_token')) {
       try {
@@ -79,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, isAuthenticated: !!user, loginWithGoogle, logout, linkSchool, refreshUser }}>
+    <AuthContext.Provider value={{ user, isLoading, isAuthenticated: !!user, loginWithGoogle, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

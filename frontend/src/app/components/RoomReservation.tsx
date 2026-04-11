@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Users, X, Trash2, AlertCircle, Loader2, Link } from 'lucide-react';
+import { Plus, Users, X, Trash2, AlertCircle, Loader2 } from 'lucide-react';
 import { schoolApi, SchoolRoom, SchoolReservation } from '../../lib/api';
-import { useAuth } from '../../contexts/AuthContext';
 
 export function RoomReservation() {
-  const { user, linkSchool, refreshUser } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [rooms, setRooms] = useState<SchoolRoom[]>([]);
   const [reservations, setReservations] = useState<SchoolReservation[]>([]);
@@ -12,7 +10,6 @@ export function RoomReservation() {
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<SchoolReservation | null>(null);
-  const [showLinkModal, setShowLinkModal] = useState(false);
 
   const loadData = useCallback(async (date: string) => {
     setIsLoading(true);
@@ -27,25 +24,16 @@ export function RoomReservation() {
       );
       setReservations(all.flat());
     } catch (e: unknown) {
-      const err = e as { response?: { status?: number; data?: { detail?: string } } };
-      const status = err?.response?.status;
-      if (status === 402) {
-        setShowLinkModal(true);
-      } else if (status === 401) {
-        setError('인증이 만료되었습니다. 다시 로그인해주세요.');
-      } else {
-        setError(err?.response?.data?.detail || '데이터 로드 실패');
-      }
+      const err = e as { response?: { data?: { detail?: string } } };
+      setError(err?.response?.data?.detail || '데이터 로드 실패');
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (user?.has_school_token) {
-      loadData(selectedDate);
-    }
-  }, [user?.has_school_token, selectedDate, loadData]);
+    loadData(selectedDate);
+  }, [selectedDate, loadData]);
 
   const handleDateChange = (date: string) => {
     setSelectedDate(date);
@@ -99,45 +87,6 @@ export function RoomReservation() {
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   };
 
-  // 미연동 상태: 흐린 안내 화면 + 오버레이 모달
-  if (!user?.has_school_token) {
-    return (
-      <div className="relative">
-        {/* 흐린 배경 */}
-        <div className="pointer-events-none select-none opacity-30 bg-white rounded-lg border border-neutral-200 px-6 py-4">
-          <div className="flex items-center gap-4 mb-4">
-            <h2 className="text-lg">회의실 예약</h2>
-          </div>
-          <div className="h-48 bg-neutral-100 rounded" />
-        </div>
-        {/* 안내 오버레이 */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-          <p className="text-sm text-neutral-500">1000school 계정 연동이 필요한 기능입니다.</p>
-          <button
-            onClick={() => setShowLinkModal(true)}
-            className="px-4 py-2 text-sm border border-neutral-300 rounded hover:bg-neutral-50 transition-colors text-neutral-700"
-          >
-            연동하기
-          </button>
-        </div>
-        {/* 연동 모달 */}
-        {showLinkModal && (
-          <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center">
-            <SchoolLinkModal
-              onLink={async (apiToken) => {
-                await linkSchool(apiToken);
-                await refreshUser();
-                setShowLinkModal(false);
-                // 연동 후 바로 데이터 로드
-                await loadData(selectedDate);
-              }}
-              onSkip={() => setShowLinkModal(false)}
-            />
-          </div>
-        )}
-      </div>
-    );
-  }
 
   return (
     <div className="bg-white rounded-lg border border-neutral-200">
@@ -253,80 +202,6 @@ export function RoomReservation() {
           formatTime={formatTime}
         />
       )}
-    </div>
-  );
-}
-
-function SchoolLinkModal({ onLink, onSkip }: { onLink: (token: string) => Promise<void>; onSkip: () => void }) {
-  const [apiToken, setApiToken] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!apiToken.trim()) return;
-    setIsLoading(true);
-    setError('');
-    try {
-      await onLink(apiToken.trim());
-    } catch (e: unknown) {
-      const err = e as { response?: { data?: { detail?: string } } };
-      setError(err?.response?.data?.detail || '유효하지 않은 토큰입니다.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <div className="flex flex-col items-center justify-center py-20">
-      <div className="bg-white border border-neutral-200 rounded-lg p-8 max-w-sm w-full mx-4">
-        <div className="flex items-center gap-3 mb-4">
-          <Link className="w-5 h-5 text-neutral-700" />
-          <h3 className="text-lg">1000school 계정 연동</h3>
-        </div>
-        <p className="text-sm text-neutral-600 mb-2">
-          회의실 예약 기능을 사용하려면 1000school API 토큰이 필요합니다.
-        </p>
-        <ol className="text-xs text-neutral-500 mb-6 space-y-1 list-decimal list-inside">
-          <li><a href="https://1000.school" target="_blank" rel="noreferrer" className="underline">1000.school</a> 에 로그인</li>
-          <li>프로필 → API 토큰 발급</li>
-          <li>아래에 붙여넣기</li>
-        </ol>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm mb-1.5">API 토큰</label>
-            <input
-              type="text"
-              value={apiToken}
-              onChange={(e) => setApiToken(e.target.value)}
-              className="w-full px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900 font-mono"
-              placeholder="토큰을 붙여넣으세요"
-              required
-            />
-          </div>
-          {error && (
-            <p className="text-sm text-red-600 flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" />
-              {error}
-            </p>
-          )}
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-neutral-900 text-white rounded hover:bg-neutral-800 transition-colors disabled:opacity-50"
-          >
-            {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-            연동하기
-          </button>
-          <button
-            type="button"
-            onClick={onSkip}
-            className="w-full px-4 py-2 text-sm text-neutral-500 hover:text-neutral-700 transition-colors"
-          >
-            나중에 하기
-          </button>
-        </form>
-      </div>
     </div>
   );
 }
