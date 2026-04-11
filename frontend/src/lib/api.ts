@@ -20,7 +20,10 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const url: string = error.config?.url ?? '';
+    // meeting-rooms 401은 학교 토큰 문제 — 로그아웃 X
+    const isSchoolEndpoint = url.includes('/api/meeting-rooms');
+    if (error.response?.status === 401 && !isSchoolEndpoint) {
       localStorage.removeItem('auth_token');
       localStorage.removeItem('user');
       window.location.href = '/login';

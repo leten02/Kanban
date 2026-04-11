@@ -28,8 +28,11 @@ export function RoomReservation() {
       setReservations(all.flat());
     } catch (e: unknown) {
       const err = e as { response?: { status?: number; data?: { detail?: string } } };
-      if (err?.response?.status === 402) {
+      const status = err?.response?.status;
+      if (status === 402) {
         setShowLinkModal(true);
+      } else if (status === 401) {
+        setError('인증이 만료되었습니다. 다시 로그인해주세요.');
       } else {
         setError(err?.response?.data?.detail || '데이터 로드 실패');
       }
@@ -121,10 +124,12 @@ export function RoomReservation() {
         {showLinkModal && (
           <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center">
             <SchoolLinkModal
-              onLink={async (studentId) => {
-                await linkSchool(studentId);
+              onLink={async (apiToken) => {
+                await linkSchool(apiToken);
                 await refreshUser();
                 setShowLinkModal(false);
+                // 연동 후 바로 데이터 로드
+                await loadData(selectedDate);
               }}
               onSkip={() => setShowLinkModal(false)}
             />
