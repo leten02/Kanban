@@ -55,9 +55,9 @@ async def google_login(
     elif callback_url:
         extra["state"] = f"url:{callback_url}"
 
-    result = await google.create_authorization_url(redirect_uri, **extra)
-    url = result["url"] if isinstance(result, dict) else result[0]
-    return {"url": url}
+    # authorize_redirect: stores state in session and redirects to Google
+    # This keeps the session cookie on the 8000 domain so callback can verify state
+    return await google.authorize_redirect(request, redirect_uri, **extra)
 
 
 @router.get("/google/callback")

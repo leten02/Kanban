@@ -5,7 +5,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  loginWithGoogle: () => Promise<void>;
+  loginWithGoogle: () => void;
   logout: () => Promise<void>;
 }
 
@@ -42,10 +42,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     init();
   }, []);
 
-  const loginWithGoogle = async () => {
-    const callbackUrl = window.location.origin;
-    const res = await authApi.getGoogleLoginUrl(callbackUrl);
-    window.location.href = res.data.url;
+  const loginWithGoogle = () => {
+    const callbackUrl = encodeURIComponent(window.location.origin);
+    // Direct redirect so the session cookie stays on the backend domain (8000)
+    // This ensures the state stored in session is available at callback time
+    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/auth/google/login?callback_url=${callbackUrl}`;
   };
 
   const logout = async () => {
