@@ -203,7 +203,7 @@ function AppContent() {
           </div>
 
           <div className="px-8 border-t border-neutral-200">
-            <div className="flex gap-1">
+            <div className="flex">
               <button
                 onClick={() => setViewMode("epic")}
                 className={`flex items-center gap-2 px-4 py-3 text-sm border-b-2 transition-colors ${
@@ -261,7 +261,7 @@ function AppContent() {
               </button>
               <button
                 onClick={() => setViewMode("settings")}
-                className={`flex items-center gap-2 px-4 py-3 text-sm border-b-2 transition-colors ${
+                className={`ml-auto flex items-center gap-2 px-4 py-3 text-sm border-b-2 transition-colors ${
                   viewMode === "settings"
                     ? "border-neutral-900 text-neutral-900"
                     : "border-transparent text-neutral-500 hover:text-neutral-900"

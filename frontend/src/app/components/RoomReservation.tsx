@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Users, X, Trash2, AlertCircle, Loader2 } from 'lucide-react';
 import { schoolApi, SchoolRoom, SchoolReservation } from '../../lib/api';
 
@@ -10,6 +10,24 @@ export function RoomReservation() {
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<SchoolReservation | null>(null);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+  const dragStartX = useRef(0);
+  const dragScrollLeft = useRef(0);
+
+  const onDragStart = (e: React.MouseEvent) => {
+    isDragging.current = true;
+    dragStartX.current = e.pageX - (scrollRef.current?.offsetLeft ?? 0);
+    dragScrollLeft.current = scrollRef.current?.scrollLeft ?? 0;
+  };
+  const onDragMove = (e: React.MouseEvent) => {
+    if (!isDragging.current || !scrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    scrollRef.current.scrollLeft = dragScrollLeft.current - (x - dragStartX.current);
+  };
+  const onDragEnd = () => { isDragging.current = false; };
 
   const loadData = useCallback(async (date: string) => {
     setIsLoading(true);
@@ -39,12 +57,16 @@ export function RoomReservation() {
     setSelectedDate(date);
   };
 
-  const handleAddReservation = async (data: { roomId: number; start_at: string; end_at: string; purpose: string }) => {
+  const handleAddReservation = async (data: { roomId: number; start_at: string; end_at: string; purpose: string; attendee_emails: string[] }) => {
     try {
+      const room = rooms.find(r => r.id === data.roomId);
       await schoolApi.createReservation(data.roomId, {
         start_at: data.start_at,
         end_at: data.end_at,
         purpose: data.purpose,
+        attendee_emails: data.attendee_emails,
+        room_name: room?.name,
+        room_location: room?.location,
       });
       await loadData(selectedDate);
       setShowAddModal(false);
@@ -125,9 +147,16 @@ export function RoomReservation() {
           <p className="text-sm">회의실 정보를 불러오는 중...</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div
+          ref={scrollRef}
+          className="overflow-x-auto cursor-grab active:cursor-grabbing select-none"
+          onMouseDown={onDragStart}
+          onMouseMove={onDragMove}
+          onMouseUp={onDragEnd}
+          onMouseLeave={onDragEnd}
+        >
           <div className="flex">
-            <div className="w-48 border-r border-neutral-200 flex-shrink-0">
+            <div className="w-48 border-r border-neutral-200 flex-shrink-0 sticky left-0 z-10 bg-white">
               <div className="h-12 border-b border-neutral-200 flex items-center px-4 bg-neutral-50">
                 <span className="text-xs text-neutral-600 font-medium">회의실</span>
               </div>
@@ -170,7 +199,7 @@ export function RoomReservation() {
                           key={res.id}
                           className="absolute top-2 bottom-2 bg-blue-500 rounded px-2 py-1 cursor-pointer hover:bg-blue-600 transition-colors"
                           style={{ left: `${pos.left}px`, width: `${Math.max(pos.width, 40)}px` }}
-                          onClick={() => setSelectedReservation(res)}
+                          onClick={(e) => { e.stopPropagation(); setSelectedReservation(res); }}
                         >
                           <div className="text-xs text-white font-medium truncate">{res.purpose || '회의'}</div>
                           <div className="text-xs text-blue-100 truncate">{formatTime(res.start_at)} - {formatTime(res.end_at)}</div>
@@ -212,7 +241,7 @@ interface AddReservationModalProps {
   rooms: SchoolRoom[];
   selectedDate: string;
   onClose: () => void;
-  onAdd: (data: { roomId: number; start_at: string; end_at: string; purpose: string }) => Promise<void>;
+  onAdd: (data: { roomId: number; start_at: string; end_at: string; purpose: string; attendee_emails: string[] }) => Promise<void>;
 }
 
 function AddReservationModal({ rooms, selectedDate, onClose, onAdd }: AddReservationModalProps) {
@@ -223,7 +252,24 @@ function AddReservationModal({ rooms, selectedDate, onClose, onAdd }: AddReserva
     endTime: '10:00',
     date: selectedDate,
   });
+  const [attendeeInput, setAttendeeInput] = useState('');
+  const [attendees, setAttendees] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  const addAttendee = (email: string) => {
+    const trimmed = email.trim();
+    if (trimmed && !attendees.includes(trimmed)) {
+      setAttendees(prev => [...prev, trimmed]);
+    }
+    setAttendeeInput('');
+  };
+
+  const handleAttendeeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addAttendee(attendeeInput);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -235,6 +281,7 @@ function AddReservationModal({ rooms, selectedDate, onClose, onAdd }: AddReserva
         start_at: `${formData.date}T${formData.startTime}:00`,
         end_at: `${formData.date}T${formData.endTime}:00`,
         purpose: formData.purpose,
+        attendee_emails: attendees,
       });
     } finally {
       setIsLoading(false);
@@ -307,6 +354,32 @@ function AddReservationModal({ rooms, selectedDate, onClose, onAdd }: AddReserva
                   required
                 />
               </div>
+            </div>
+            <div>
+              <label className="block text-sm mb-1.5">
+                참석자
+                <span className="text-neutral-400 font-normal ml-1">(이메일 입력 후 Enter)</span>
+              </label>
+              {attendees.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {attendees.map(email => (
+                    <span key={email} className="flex items-center gap-1 px-2 py-0.5 bg-neutral-100 rounded-full text-xs text-neutral-700">
+                      {email}
+                      <button type="button" onClick={() => setAttendees(prev => prev.filter(e => e !== email))} className="text-neutral-400 hover:text-neutral-700">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <input
+                type="email"
+                value={attendeeInput}
+                onChange={(e) => setAttendeeInput(e.target.value)}
+                onKeyDown={handleAttendeeKeyDown}
+                onBlur={() => attendeeInput && addAttendee(attendeeInput)}
+                className="w-full px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                placeholder="참석자 이메일 입력"
+              />
+              <p className="text-xs text-neutral-400 mt-1">구글 캘린더에 참석자 초대가 자동으로 전송됩니다.</p>
             </div>
           </div>
           <div className="flex gap-3 mt-6">

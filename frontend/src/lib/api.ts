@@ -205,7 +205,7 @@ export const schoolApi = {
     api.get<SchoolRoom[]>('/api/meeting-rooms'),
   listReservations: (roomId: number, date: string) =>
     api.get<SchoolReservation[]>(`/api/meeting-rooms/${roomId}/reservations`, { params: { date } }),
-  createReservation: (roomId: number, data: { start_at: string; end_at: string; purpose?: string }) =>
+  createReservation: (roomId: number, data: { start_at: string; end_at: string; purpose?: string; attendee_emails?: string[]; room_name?: string; room_location?: string }) =>
     api.post<SchoolReservation>(`/api/meeting-rooms/${roomId}/reservations`, data),
   deleteReservation: (reservationId: number) =>
     api.delete(`/api/meeting-rooms/reservations/${reservationId}`),
