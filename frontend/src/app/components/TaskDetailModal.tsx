@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Task } from '../App';
-import { X, Calendar, Flag, CheckSquare, MessageSquare, Plus, Trash2 } from 'lucide-react';
+import { X, Calendar, Flag, CheckSquare, MessageSquare, Plus, Trash2, Loader2 } from 'lucide-react';
 import { AssigneePicker } from './AssigneePicker';
 import { TagPicker } from './TagPicker';
 import { subtaskApi, commentApi, TaskComment, Subtask } from '../../lib/api';
@@ -18,14 +18,24 @@ export function TaskDetailModal({ task, projectId, onClose, onUpdate }: TaskDeta
   const [newChecklistItem, setNewChecklistItem] = useState('');
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [comments, setComments] = useState<TaskComment[]>([]);
+  const [isLoadingSubtasks, setIsLoadingSubtasks] = useState(false);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [isSendingComment, setIsSendingComment] = useState(false);
 
   useEffect(() => {
     if (task) {
       setEditedTask({ ...task });
-      // DB에서 서브태스크/댓글 로드
       const taskId = Number(task.id);
-      subtaskApi.list(taskId).then(r => setSubtasks(r.data)).catch(() => setSubtasks([]));
-      commentApi.list(taskId).then(r => setComments(r.data)).catch(() => setComments([]));
+      setIsLoadingSubtasks(true);
+      setIsLoadingComments(true);
+      subtaskApi.list(taskId)
+        .then(r => setSubtasks(r.data))
+        .catch(() => setSubtasks([]))
+        .finally(() => setIsLoadingSubtasks(false));
+      commentApi.list(taskId)
+        .then(r => setComments(r.data))
+        .catch(() => setComments([]))
+        .finally(() => setIsLoadingComments(false));
     }
   }, [task?.id]);
 
@@ -39,12 +49,16 @@ export function TaskDetailModal({ task, projectId, onClose, onUpdate }: TaskDeta
 
   const handleAddComment = async () => {
     if (!newComment.trim()) return;
+    setIsSendingComment(true);
     try {
       const res = await commentApi.create(Number(task.id), newComment.trim());
       setComments(prev => [...prev, res.data]);
       setNewComment('');
     } catch (e) {
       console.error(e);
+      alert('댓글 전송 실패. 다시 시도해주세요.');
+    } finally {
+      setIsSendingComment(false);
     }
   };
 
@@ -155,7 +169,11 @@ export function TaskDetailModal({ task, projectId, onClose, onUpdate }: TaskDeta
                 </div>
 
                 <div className="space-y-2 mb-3">
-                  {subtasks.map(item => (
+                  {isLoadingSubtasks ? (
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="w-4 h-4 animate-spin text-neutral-300" />
+                    </div>
+                  ) : subtasks.map(item => (
                     <div key={item.id} className="flex items-center gap-2 group">
                       <input
                         type="checkbox"
@@ -206,7 +224,11 @@ export function TaskDetailModal({ task, projectId, onClose, onUpdate }: TaskDeta
                 </div>
 
                 <div className="space-y-3 mb-3">
-                  {comments.map(comment => (
+                  {isLoadingComments ? (
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="w-4 h-4 animate-spin text-neutral-300" />
+                    </div>
+                  ) : comments.map(comment => (
                     <div key={comment.id} className="bg-neutral-50 rounded-lg p-3 group relative">
                       <div className="flex items-center gap-2 mb-1">
                         <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-xs text-white">
@@ -240,8 +262,10 @@ export function TaskDetailModal({ task, projectId, onClose, onUpdate }: TaskDeta
                   />
                   <button
                     onClick={handleAddComment}
-                    className="px-4 py-2 bg-neutral-900 text-white rounded-lg text-sm hover:bg-neutral-800 transition-colors"
+                    disabled={isSendingComment}
+                    className="px-4 py-2 bg-neutral-900 text-white rounded-lg text-sm hover:bg-neutral-800 transition-colors disabled:opacity-50 flex items-center gap-1"
                   >
+                    {isSendingComment && <Loader2 className="w-3 h-3 animate-spin" />}
                     추가
                   </button>
                 </div>

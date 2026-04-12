@@ -140,8 +140,12 @@ function AppContent() {
   }
 
   const moveTask = (taskId: string, newStatus: Task["status"]) => {
+    const prev = tasks.find(t => t.id === taskId);
     setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: newStatus } : t));
-    taskApi.updateStatus(Number(taskId), toApiStatus(newStatus)).catch(console.error);
+    taskApi.updateStatus(Number(taskId), toApiStatus(newStatus)).catch(err => {
+      console.error(err);
+      if (prev) setTasks(cur => cur.map(t => t.id === taskId ? { ...t, status: prev.status } : t));
+    });
   };
 
   const addTask = async (newTask: Omit<Task, "id">) => {
@@ -149,15 +153,20 @@ function AppContent() {
       alert('에픽을 먼저 만들어주세요. (에픽 탭에서 에픽을 생성하세요)');
       return;
     }
-    const res = await taskApi.create(epicsForProject[0].id, {
-      title: newTask.title,
-      description: newTask.description || null,
-      priority: newTask.priority,
-      due_date: newTask.dueDate || null,
-      assignee_member_id: newTask.assignee_member_id ?? null,
-      tags: newTask.tags || [],
-    });
-    setTasks((prev) => [...prev, apiTaskToFrontend(res.data)]);
+    try {
+      const res = await taskApi.create(epicsForProject[0].id, {
+        title: newTask.title,
+        description: newTask.description || null,
+        priority: newTask.priority,
+        due_date: newTask.dueDate || null,
+        assignee_member_id: newTask.assignee_member_id ?? null,
+        tags: newTask.tags || [],
+      });
+      setTasks((prev) => [...prev, apiTaskToFrontend(res.data)]);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ?? '작업 생성 실패';
+      alert(msg);
+    }
   };
 
   const deleteTask = (taskId: string) => {

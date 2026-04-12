@@ -85,8 +85,9 @@ export function SettingsPage({ projectId, projectName, projectDescription, onDel
     try {
       await memberApi.remove(projectId, memberId);
       setMembers(prev => prev.filter(m => m.id !== memberId));
-    } catch (err) {
-      console.error(err);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ?? '멤버 제거 실패';
+      alert(msg);
     }
   };
 
@@ -95,8 +96,9 @@ export function SettingsPage({ projectId, projectName, projectDescription, onDel
     try {
       await projectApi.delete(projectId);
       onDeleteProject();
-    } catch (err) {
-      console.error(err);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ?? '프로젝트 삭제 실패';
+      alert(msg);
       setDeleting(false);
       setConfirmDelete(false);
     }

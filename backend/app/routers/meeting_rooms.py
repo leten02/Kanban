@@ -1,8 +1,11 @@
 import asyncio
+import logging
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from app.core.config import settings
 from app.core.database import get_db
@@ -99,8 +102,8 @@ async def create_reservation(
                     location=location,
                 ),
             )
-        except Exception:
-            pass  # 캘린더 실패해도 1000school 예약은 성공으로 반환
+        except Exception as e:
+            logger.warning("Google Calendar 이벤트 생성 실패 (non-fatal): %s", e)
 
     return result
 

@@ -254,6 +254,24 @@ export const memberApi = {
     api.get<string[]>(`/api/projects/${projectId}/tags`),
 };
 
+export interface Document {
+  id: number;
+  project_id: number;
+  title: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const documentApi = {
+  list: (projectId: number) => api.get<Document[]>(`/projects/${projectId}/documents`),
+  create: (projectId: number, data: { title: string; content: string }) =>
+    api.post<Document>(`/projects/${projectId}/documents`, data),
+  update: (id: number, data: { title?: string; content?: string }) =>
+    api.patch<Document>(`/documents/${id}`, data),
+  delete: (id: number) => api.delete(`/documents/${id}`),
+};
+
 export const roomApi = {
   list: () => api.get<MeetingRoom[]>('/meeting-rooms'),
   getReservations: (roomId: number, date: string) =>

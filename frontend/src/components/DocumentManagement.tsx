@@ -1,16 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Plus, X, Edit2, Trash2, FileText, Eye, Code } from 'lucide-react';
+import { Plus, X, Edit2, Trash2, FileText, Eye, Code, Loader2 } from 'lucide-react';
+import { documentApi, Document } from '../lib/api';
 
-export interface Document {
-  id: number;
-  project_id: number;
-  title: string;
-  content: string;
-  created_at: string;
-  updated_at: string;
-}
+export type { Document };
 
 interface DocumentManagementProps {
   projectId: number;
@@ -18,47 +12,53 @@ interface DocumentManagementProps {
 
 export function DocumentManagement({ projectId }: DocumentManagementProps) {
   const [documents, setDocuments] = useState<Document[]>([]);
-
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [viewMode, setViewMode] = useState<'preview' | 'edit'>('preview');
 
-  const handleCreateDocument = (data: { title: string; content: string }) => {
-    const newDoc: Document = {
-      id: Date.now(),
-      project_id: projectId,
-      title: data.title,
-      content: data.content,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    setDocuments([...documents, newDoc]);
-    setShowCreateModal(false);
-    setSelectedDoc(newDoc);
+  useEffect(() => {
+    setIsLoading(true);
+    documentApi.list(projectId)
+      .then(res => setDocuments(res.data))
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, [projectId]);
+
+  const handleCreateDocument = async (data: { title: string; content: string }) => {
+    try {
+      const res = await documentApi.create(projectId, data);
+      setDocuments(prev => [res.data, ...prev]);
+      setShowCreateModal(false);
+      setSelectedDoc(res.data);
+    } catch (e) {
+      alert('문서 생성 실패');
+      console.error(e);
+    }
   };
 
-  const handleUpdateDocument = (id: number, data: { title?: string; content?: string }) => {
-    setDocuments(
-      documents.map((doc) =>
-        doc.id === id
-          ? { ...doc, ...data, updated_at: new Date().toISOString() }
-          : doc
-      )
-    );
-    if (selectedDoc?.id === id) {
-      setSelectedDoc({ ...selectedDoc, ...data, updated_at: new Date().toISOString() });
+  const handleUpdateDocument = async (id: number, data: { title?: string; content?: string }) => {
+    try {
+      const res = await documentApi.update(id, data);
+      setDocuments(prev => prev.map(doc => doc.id === id ? res.data : doc));
+      setSelectedDoc(res.data);
+      setIsEditing(false);
+    } catch (e) {
+      alert('문서 저장 실패');
+      console.error(e);
     }
-    setIsEditing(false);
   };
 
-  const handleDeleteDocument = (id: number) => {
-    if (!confirm('이 문서를 삭제하시겠습니까?')) {
-      return;
-    }
-    setDocuments(documents.filter((doc) => doc.id !== id));
-    if (selectedDoc?.id === id) {
-      setSelectedDoc(null);
+  const handleDeleteDocument = async (id: number) => {
+    if (!confirm('이 문서를 삭제하시겠습니까?')) return;
+    try {
+      await documentApi.delete(id);
+      setDocuments(prev => prev.filter(doc => doc.id !== id));
+      if (selectedDoc?.id === id) setSelectedDoc(null);
+    } catch (e) {
+      alert('문서 삭제 실패');
+      console.error(e);
     }
   };
 
@@ -85,7 +85,11 @@ export function DocumentManagement({ projectId }: DocumentManagementProps) {
           </button>
         </div>
 
-        {documents.length === 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-6 h-6 animate-spin text-neutral-300" />
+          </div>
+        ) : documents.length === 0 ? (
           <div className="text-center py-12 border-2 border-dashed border-neutral-200 rounded-lg">
             <FileText className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
             <p className="text-neutral-600 mb-4">문서가 없습니다</p>

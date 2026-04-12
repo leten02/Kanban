@@ -166,6 +166,7 @@ async def link_school(
     return {"ok": True, "has_school_token": True}
 
 
+@router.post("/logout")
 async def logout():
     response = Response(content='{"message": "Logged out"}', media_type="application/json")
     response.delete_cookie("session_user_id")

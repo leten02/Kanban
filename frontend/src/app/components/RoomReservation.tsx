@@ -449,6 +449,10 @@ function AddReservationModal({ rooms, selectedDate, projectId, initialRoomId, in
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.purpose) return;
+    if (formData.startTime >= formData.endTime) {
+      alert('종료 시간은 시작 시간보다 뒤여야 합니다.');
+      return;
+    }
     setIsLoading(true);
     try {
       await onAdd({
