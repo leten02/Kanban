@@ -3,6 +3,7 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { ProjectStats } from "./components/ProjectStats";
 import { KanbanBoard } from "./components/KanbanBoard";
+import { BoardFilterBar, BoardFilters } from "./components/BoardFilterBar";
 import { TimelineView } from "./components/TimelineView";
 import { RoomReservation } from "./components/RoomReservation";
 import { AddTaskModal } from "./components/AddTaskModal";
@@ -101,6 +102,12 @@ function AppContent() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [initialTaskStatus, setInitialTaskStatus] = useState<Task['status']>('todo');
+  const [boardFilters, setBoardFilters] = useState<BoardFilters>({
+    search: '',
+    assigneeMemberId: null,
+    priority: null,
+    tag: null,
+  });
 
   const openAddTask = (status: Task['status'] = 'todo') => {
     setInitialTaskStatus(status);
@@ -160,8 +167,21 @@ function AppContent() {
 
   const updateTask = (taskId: string, updates: Partial<Task>) => {
     setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, ...updates } : t));
+    // status 변경
     if (updates.status) {
       taskApi.updateStatus(Number(taskId), toApiStatus(updates.status)).catch(console.error);
+    }
+    // 나머지 필드 변경 (status 제외)
+    const { status: _s, comments: _c, checklist: _ch, ...rest } = updates;
+    if (Object.keys(rest).length > 0) {
+      taskApi.update(Number(taskId), {
+        title: rest.title,
+        description: rest.description,
+        priority: rest.priority,
+        due_date: rest.dueDate || null,
+        tags: rest.tags,
+        assignee_member_id: rest.assignee_member_id,
+      }).catch(console.error);
     }
   };
 
@@ -287,8 +307,21 @@ function AppContent() {
           {viewMode === "board" && (
             <>
               <ProjectStats tasks={tasks} />
+              <div className="mb-3">
+                <BoardFilterBar
+                  projectId={selectedProject.id}
+                  filters={boardFilters}
+                  onChange={setBoardFilters}
+                />
+              </div>
               <KanbanBoard
-                tasks={tasks}
+                tasks={tasks.filter(t => {
+                  if (boardFilters.search && !t.title.toLowerCase().includes(boardFilters.search.toLowerCase())) return false;
+                  if (boardFilters.assigneeMemberId !== null && t.assignee_member_id !== boardFilters.assigneeMemberId) return false;
+                  if (boardFilters.priority && t.priority !== boardFilters.priority) return false;
+                  if (boardFilters.tag && !t.tags.includes(boardFilters.tag)) return false;
+                  return true;
+                })}
                 moveTask={moveTask}
                 onTaskClick={setSelectedTask}
                 onAddTask={openAddTask}
@@ -330,6 +363,7 @@ function AppContent() {
 
         <TaskDetailModal
           task={selectedTask}
+          projectId={selectedProject.id}
           onClose={() => setSelectedTask(null)}
           onUpdate={updateTask}
         />

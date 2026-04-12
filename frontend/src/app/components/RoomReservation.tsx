@@ -1,8 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Users, X, Trash2, AlertCircle, Loader2 } from 'lucide-react';
+import { Plus, Users, X, Trash2, AlertCircle, Loader2, CalendarCheck } from 'lucide-react';
 import { schoolApi, SchoolRoom, SchoolReservation, memberApi, ProjectMember } from '../../lib/api';
 
+type RoomTab = 'timetable' | 'my';
+
 export function RoomReservation({ projectId }: { projectId?: number }) {
+  const [activeTab, setActiveTab] = useState<RoomTab>('timetable');
+  const [myReservations, setMyReservations] = useState<SchoolReservation[]>([]);
+  const [myResLoading, setMyResLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [rooms, setRooms] = useState<SchoolRoom[]>([]);
   const [reservations, setReservations] = useState<SchoolReservation[]>([]);
@@ -63,6 +68,15 @@ export function RoomReservation({ projectId }: { projectId?: number }) {
     loadData(selectedDate);
   }, [selectedDate, loadData]);
 
+  useEffect(() => {
+    if (activeTab !== 'my') return;
+    setMyResLoading(true);
+    schoolApi.myReservations()
+      .then(r => setMyReservations(r.data))
+      .catch(() => setMyReservations([]))
+      .finally(() => setMyResLoading(false));
+  }, [activeTab]);
+
   const handleDateChange = (date: string) => {
     setSelectedDate(date);
   };
@@ -95,6 +109,17 @@ export function RoomReservation({ projectId }: { projectId?: number }) {
       await schoolApi.deleteReservation(reservation.id);
       await loadData(selectedDate);
       setSelectedReservation(null);
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } } };
+      alert(err?.response?.data?.detail || '예약 취소 실패');
+    }
+  };
+
+  const handleCancelReservation = async (reservation: SchoolReservation) => {
+    if (!window.confirm('예약을 취소하시겠습니까?')) return;
+    try {
+      await schoolApi.deleteReservation(reservation.id);
+      setMyReservations(prev => prev.filter(r => r.id !== reservation.id));
     } catch (e: unknown) {
       const err = e as { response?: { data?: { detail?: string } } };
       alert(err?.response?.data?.detail || '예약 취소 실패');
@@ -141,12 +166,30 @@ export function RoomReservation({ projectId }: { projectId?: number }) {
       <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
         <div className="flex items-center gap-4">
           <h2 className="text-lg">회의실 예약</h2>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => handleDateChange(e.target.value)}
-            className="px-3 py-1.5 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900"
-          />
+          {/* 탭 */}
+          <div className="flex gap-1 bg-neutral-100 rounded-lg p-1">
+            <button
+              onClick={() => setActiveTab('timetable')}
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${activeTab === 'timetable' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'}`}
+            >
+              타임테이블
+            </button>
+            <button
+              onClick={() => setActiveTab('my')}
+              className={`flex items-center gap-1 px-3 py-1 text-sm rounded-md transition-colors ${activeTab === 'my' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500 hover:text-neutral-700'}`}
+            >
+              <CalendarCheck className="w-3.5 h-3.5" />
+              내 예약
+            </button>
+          </div>
+          {activeTab === 'timetable' && (
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => handleDateChange(e.target.value)}
+              className="px-3 py-1.5 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900"
+            />
+          )}
           {isLoading && <Loader2 className="w-4 h-4 animate-spin text-neutral-400" />}
         </div>
         <button
@@ -158,6 +201,51 @@ export function RoomReservation({ projectId }: { projectId?: number }) {
           예약 추가
         </button>
       </div>
+
+      {/* 내 예약 탭 */}
+      {activeTab === 'my' && (
+        <div className="p-6">
+          {myResLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+            </div>
+          ) : myReservations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-neutral-400">
+              <CalendarCheck className="w-10 h-10 mb-3 text-neutral-300" />
+              <p className="text-sm">예정된 예약이 없습니다</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {myReservations.map(r => {
+                const start = new Date(r.start_at);
+                const end = new Date(r.end_at);
+                const fmt = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                const dateStr = start.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+                return (
+                  <div key={r.id} className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
+                    <div>
+                      <p className="text-sm font-medium">{dateStr}</p>
+                      <p className="text-sm text-neutral-600">{fmt(start)} – {fmt(end)}</p>
+                      {r.purpose && <p className="text-xs text-neutral-500 mt-0.5">{r.purpose}</p>}
+                    </div>
+                    {r.can_cancel && (
+                      <button
+                        onClick={() => handleCancelReservation(r)}
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        취소
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'timetable' && (<>
 
       {error && (
         <div className="flex items-center gap-2 px-6 py-3 bg-red-50 text-red-600 text-sm border-b border-red-100">
@@ -277,6 +365,8 @@ export function RoomReservation({ projectId }: { projectId?: number }) {
           formatTime={formatTime}
         />
       )}
+
+    </>)}
     </div>
   );
 }

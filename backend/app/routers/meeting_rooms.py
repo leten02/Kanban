@@ -119,3 +119,26 @@ async def delete_reservation(
             raise HTTPException(403, "본인이 예약한 건만 취소할 수 있습니다.")
         r.raise_for_status()
         return {"ok": True}
+
+
+@router.get("/my-reservations")
+async def my_reservations(current_user: User = Depends(get_current_user)):
+    """현재 사용자의 오늘 이후 예약 목록 (1000school API 프록시)."""
+    async with httpx.AsyncClient() as client:
+        r = await client.get(
+            f"{SCHOOL_API}/meeting-rooms/reservations/my",
+            headers=_school_headers(),
+        )
+        if r.status_code == 404:
+            return []
+        r.raise_for_status()
+        data = r.json()
+
+    # 오늘 이후 예약만 필터
+    from datetime import date as _date
+    today = _date.today().isoformat()
+    filtered = [
+        item for item in (data if isinstance(data, list) else [])
+        if item.get("start_at", "") >= today
+    ]
+    return filtered

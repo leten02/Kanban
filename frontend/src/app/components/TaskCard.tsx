@@ -1,10 +1,42 @@
 import { useDrag } from 'react-dnd';
 import { Task } from '../App';
-import { CheckSquare } from 'lucide-react';
+import { CheckSquare, Calendar } from 'lucide-react';
 
 interface TaskCardProps {
   task: Task;
   onClick: () => void;
+}
+
+function DueDateBadge({ dueDate }: { dueDate: string }) {
+  if (!dueDate) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate);
+  due.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+  let label: string;
+  let cls: string;
+  if (diffDays < 0) {
+    label = `D+${Math.abs(diffDays)}`;
+    cls = 'text-red-600 bg-red-50';
+  } else if (diffDays === 0) {
+    label = 'D-day';
+    cls = 'text-orange-600 bg-orange-50';
+  } else if (diffDays === 1) {
+    label = 'D-1';
+    cls = 'text-orange-500 bg-orange-50';
+  } else {
+    label = `D-${diffDays}`;
+    cls = 'text-neutral-500 bg-neutral-50';
+  }
+
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded font-medium ${cls}`}>
+      <Calendar className="w-3 h-3" />
+      {label}
+    </span>
+  );
 }
 
 export function TaskCard({ task, onClick }: TaskCardProps) {
@@ -25,10 +57,6 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
     let hash = 0;
     for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
     return colors[Math.abs(hash) % colors.length];
-  };
-
-  const getInitials = (name: string) => {
-    return name.charAt(0);
   };
 
   const getTagColor = (tag: string) => {
@@ -67,7 +95,7 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs text-neutral-500">TFT-{task.id}</span>
           {task.checklist.length > 0 && (
             <div className="flex items-center gap-1 text-xs text-neutral-500">
@@ -75,8 +103,9 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
               <span>{task.checklist.filter(item => item.completed).length}/{task.checklist.length}</span>
             </div>
           )}
+          {task.dueDate && <DueDateBadge dueDate={task.dueDate} />}
         </div>
-        <div className="flex -space-x-1">
+        <div className="flex -space-x-1 flex-shrink-0">
           {task.assignee_name ? (
             <div
               className={`w-6 h-6 rounded-full ${getAvatarColor(task.assignee_name)} flex items-center justify-center text-xs text-white font-medium border-2 border-white`}
@@ -92,7 +121,7 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
                   className={`w-6 h-6 rounded-full ${getAvatarColor(assignee)} flex items-center justify-center text-xs text-white font-medium border-2 border-white`}
                   title={assignee}
                 >
-                  {getInitials(assignee)}
+                  {assignee.charAt(0)}
                 </div>
               ))}
               {task.assignees.length > 3 && (

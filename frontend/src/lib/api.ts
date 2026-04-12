@@ -179,6 +179,22 @@ export const subtaskApi = {
   delete: (id: number) => api.delete(`/subtasks/${id}`),
 };
 
+export interface TaskComment {
+  id: number;
+  task_id: number;
+  author_user_id: number | null;
+  author_name: string;
+  content: string;
+  created_at: string;
+}
+
+export const commentApi = {
+  list: (taskId: number) => api.get<TaskComment[]>(`/tasks/${taskId}/comments`),
+  create: (taskId: number, content: string) =>
+    api.post<TaskComment>(`/tasks/${taskId}/comments`, { content }),
+  delete: (commentId: number) => api.delete(`/tasks/comments/${commentId}`),
+};
+
 export interface SchoolRoom {
   id: number;
   name: string;
@@ -209,6 +225,8 @@ export const schoolApi = {
     api.post<SchoolReservation>(`/api/meeting-rooms/${roomId}/reservations`, data),
   deleteReservation: (reservationId: number) =>
     api.delete(`/api/meeting-rooms/reservations/${reservationId}`),
+  myReservations: () =>
+    api.get<SchoolReservation[]>('/api/meeting-rooms/my-reservations'),
 };
 
 export interface ProjectMember {
