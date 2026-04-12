@@ -307,7 +307,7 @@ function AppContent() {
           {viewMode === "board" && (
             <>
               <ProjectStats tasks={tasks} />
-              <div className="mb-3">
+              <div className="mb-3 w-full">
                 <BoardFilterBar
                   projectId={selectedProject.id}
                   filters={boardFilters}

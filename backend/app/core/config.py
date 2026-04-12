@@ -6,6 +6,7 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite+aiosqlite:///./kanban.db"
     secret_key: str = "dev-secret-key-change-in-production"
+    frontend_url: str = ""
 
     google_client_id: str = ""
     google_client_secret: str = ""

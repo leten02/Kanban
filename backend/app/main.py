@@ -21,9 +21,17 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Kanban API", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=settings.secret_key)
+
+_allowed_origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
+if settings.frontend_url:
+    _allowed_origins.append(settings.frontend_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -38,3 +46,9 @@ app.include_router(rooms.router)
 app.include_router(teams.router)
 app.include_router(meeting_rooms.router)
 app.include_router(project_members.router)
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+

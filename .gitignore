@@ -28,7 +28,10 @@ htmlcov/
 
 # Environment
 .env
-.env.*
+.env.local
+.env.*.local
+# Keep .env.example (template, no secrets)
+!.env.example
 
 # Supabase temp
 supabase/.temp/

@@ -36,18 +36,6 @@ export function BoardFilterBar({ projectId, filters, onChange }: BoardFilterBarP
 
   return (
     <div className="flex items-center gap-3 flex-wrap">
-      {/* 검색 */}
-      <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
-        <input
-          type="text"
-          value={filters.search}
-          onChange={e => onChange({ ...filters, search: e.target.value })}
-          placeholder="제목 검색"
-          className="pl-7 pr-3 py-1.5 text-sm border border-neutral-300 rounded-lg w-40 focus:outline-none focus:ring-2 focus:ring-neutral-900"
-        />
-      </div>
-
       {/* 담당자 */}
       <select
         value={filters.assigneeMemberId ?? ''}
@@ -99,6 +87,18 @@ export function BoardFilterBar({ projectId, filters, onChange }: BoardFilterBarP
           </span>
         </button>
       )}
+
+      {/* 검색 — 제일 우측 */}
+      <div className="relative ml-auto">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+        <input
+          type="text"
+          value={filters.search}
+          onChange={e => onChange({ ...filters, search: e.target.value })}
+          placeholder="제목 검색"
+          className="pl-7 pr-3 py-1.5 text-sm border border-neutral-300 rounded-lg w-40 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+        />
+      </div>
     </div>
   );
 }
