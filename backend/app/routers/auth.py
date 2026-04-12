@@ -67,6 +67,13 @@ async def google_callback(
 ):
     oauth = _get_oauth_client()
     google = oauth.create_client("google")
+
+    # Railway's reverse proxy can drop session cookies between login→callback.
+    # Re-inject the state from the query param so Authlib's CSRF check passes.
+    state = request.query_params.get("state", "")
+    if state:
+        request.session[f"_state_google_{state}"] = {"state": state}
+
     token = await google.authorize_access_token(request)
 
     userinfo = token.get("userinfo") or await google.userinfo(token=token)
