@@ -24,6 +24,7 @@ export function AddTaskModal({ isOpen, onClose, onAdd, projectId, initialStatus 
     status: (initialStatus ?? 'todo') as Task['status'],
     tags: [] as string[],
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -35,10 +36,12 @@ export function AddTaskModal({ isOpen, onClose, onAdd, projectId, initialStatus 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
-    if (!formData.title || !formData.dueDate) {
-      return;
-    }
+    if (!formData.title.trim()) return;
+    if (!formData.dueDate) return;
+
+    setIsSubmitting(true);
 
     onAdd({
       title: formData.title,
@@ -66,7 +69,7 @@ export function AddTaskModal({ isOpen, onClose, onAdd, projectId, initialStatus 
       status: 'todo',
       tags: [],
     });
-
+    setIsSubmitting(false);
     onClose();
   };
 
@@ -196,9 +199,10 @@ export function AddTaskModal({ isOpen, onClose, onAdd, projectId, initialStatus 
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors"
+              disabled={!formData.title.trim() || !formData.dueDate || isSubmitting}
+              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              추가
+              {isSubmitting ? '추가 중...' : '추가'}
             </button>
           </div>
         </form>

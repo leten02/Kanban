@@ -58,7 +58,7 @@ export function KanbanColumn({ status, title, tasks, moveTask, onTaskClick, onAd
         {tasks.length === 0 && (
           <div className="flex flex-col items-center justify-center h-24 text-neutral-300 gap-1 select-none">
             <Plus className="w-5 h-5" />
-            <span className="text-xs">클릭해서 추가</span>
+            <span className="text-xs">클릭 또는 드래그하여 추가</span>
           </div>
         )}
       </div>

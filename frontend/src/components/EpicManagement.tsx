@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Plus, X, Edit2, Trash2, Target, Loader2 } from 'lucide-react';
 import { epicApi, Epic as ApiEpic } from '../lib/api';
 

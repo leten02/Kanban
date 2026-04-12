@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { ProjectStats } from "./components/ProjectStats";
@@ -150,16 +151,17 @@ function AppContent() {
 
   const moveTask = (taskId: string, newStatus: Task["status"]) => {
     const prev = tasks.find(t => t.id === taskId);
-    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, status: newStatus } : t));
+    setTasks((cur) => cur.map((t) => t.id === taskId ? { ...t, status: newStatus } : t));
     taskApi.updateStatus(Number(taskId), toApiStatus(newStatus)).catch(err => {
       console.error(err);
       if (prev) setTasks(cur => cur.map(t => t.id === taskId ? { ...t, status: prev.status } : t));
+      toast.error('상태 변경에 실패했습니다');
     });
   };
 
   const addTask = async (newTask: Omit<Task, "id">) => {
     if (!selectedProject || !epicsForProject.length) {
-      alert('에픽을 먼저 만들어주세요. (에픽 탭에서 에픽을 생성하세요)');
+      toast.error('에픽이 없습니다. 에픽 탭에서 먼저 에픽을 생성하세요.');
       return;
     }
     try {
@@ -173,8 +175,8 @@ function AppContent() {
       });
       setTasks((prev) => [...prev, apiTaskToFrontend(res.data)]);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ?? '작업 생성 실패';
-      alert(msg);
+      const msg = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ?? '작업 생성에 실패했습니다';
+      toast.error(msg);
     }
   };
 
@@ -197,6 +199,7 @@ function AppContent() {
         title: rest.title,
         description: rest.description,
         priority: rest.priority,
+        start_date: rest.startDate || null,
         due_date: rest.dueDate || null,
         tags: rest.tags,
         assignee_member_id: rest.assignee_member_id,
@@ -341,6 +344,7 @@ function AppContent() {
                   if (boardFilters.tag && !t.tags.includes(boardFilters.tag)) return false;
                   return true;
                 })}
+                filters={boardFilters}
                 moveTask={moveTask}
                 onTaskClick={setSelectedTask}
                 onAddTask={openAddTask}

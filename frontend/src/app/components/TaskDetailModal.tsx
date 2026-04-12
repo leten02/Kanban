@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Task } from '../App';
 import { X, Calendar, Flag, CheckSquare, MessageSquare, Plus, Trash2, Loader2 } from 'lucide-react';
 import { AssigneePicker } from './AssigneePicker';
@@ -47,6 +48,11 @@ export function TaskDetailModal({ task, projectId, onClose, onUpdate }: TaskDeta
     onUpdate(task.id, updates);
   };
 
+  // title/description은 로컬 상태만 업데이트 (저장은 onBlur에서)
+  const handleTextChange = (updates: Partial<Task>) => {
+    setEditedTask(prev => prev ? { ...prev, ...updates } : prev);
+  };
+
   const handleAddComment = async () => {
     if (!newComment.trim()) return;
     setIsSendingComment(true);
@@ -56,7 +62,7 @@ export function TaskDetailModal({ task, projectId, onClose, onUpdate }: TaskDeta
       setNewComment('');
     } catch (e) {
       console.error(e);
-      alert('댓글 전송 실패. 다시 시도해주세요.');
+      toast.error('댓글 전송에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setIsSendingComment(false);
     }
@@ -126,7 +132,8 @@ export function TaskDetailModal({ task, projectId, onClose, onUpdate }: TaskDeta
           <input
             type="text"
             value={editedTask.title}
-            onChange={(e) => handleUpdate({ title: e.target.value })}
+            onChange={(e) => handleTextChange({ title: e.target.value })}
+            onBlur={(e) => handleUpdate({ title: e.target.value })}
             className="text-xl flex-1 mr-4 bg-transparent border-none focus:outline-none"
           />
           <button onClick={onClose} className="p-1 hover:bg-neutral-100 rounded transition-colors">
@@ -135,14 +142,15 @@ export function TaskDetailModal({ task, projectId, onClose, onUpdate }: TaskDeta
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <div className="grid grid-cols-3 gap-6 p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
             {/* 왼쪽: 설명, 체크리스트, 댓글 */}
-            <div className="col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-6">
               <div>
                 <label className="block text-sm mb-2">설명</label>
                 <textarea
                   value={editedTask.description}
-                  onChange={(e) => handleUpdate({ description: e.target.value })}
+                  onChange={(e) => handleTextChange({ description: e.target.value })}
+                  onBlur={(e) => handleUpdate({ description: e.target.value })}
                   className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent resize-none"
                   rows={3}
                   placeholder="작업 설명을 입력하세요"

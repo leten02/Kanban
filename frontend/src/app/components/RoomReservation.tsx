@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import { Plus, Users, X, Trash2, AlertCircle, Loader2, CalendarCheck } from 'lucide-react';
 import { schoolApi, SchoolRoom, SchoolReservation, memberApi, ProjectMember } from '../../lib/api';
 import { getAvatarColor } from '../../lib/avatarUtils';
@@ -97,13 +98,13 @@ export function RoomReservation({ projectId }: { projectId?: number }) {
       setShowAddModal(false);
     } catch (e: unknown) {
       const err = e as { response?: { data?: { detail?: string } } };
-      alert(err?.response?.data?.detail || '예약 실패');
+      toast.error(err?.response?.data?.detail || '예약에 실패했습니다');
     }
   };
 
   const handleDeleteReservation = async (reservation: SchoolReservation) => {
     if (!reservation.can_cancel) {
-      alert('본인이 예약한 건만 취소할 수 있습니다.');
+      toast.error('본인이 예약한 건만 취소할 수 있습니다.');
       return;
     }
     try {
@@ -112,7 +113,7 @@ export function RoomReservation({ projectId }: { projectId?: number }) {
       setSelectedReservation(null);
     } catch (e: unknown) {
       const err = e as { response?: { data?: { detail?: string } } };
-      alert(err?.response?.data?.detail || '예약 취소 실패');
+      toast.error(err?.response?.data?.detail || '예약 취소에 실패했습니다');
     }
   };
 
@@ -123,7 +124,7 @@ export function RoomReservation({ projectId }: { projectId?: number }) {
       setMyReservations(prev => prev.filter(r => r.id !== reservation.id));
     } catch (e: unknown) {
       const err = e as { response?: { data?: { detail?: string } } };
-      alert(err?.response?.data?.detail || '예약 취소 실패');
+      toast.error(err?.response?.data?.detail || '예약 취소에 실패했습니다');
     }
   };
 
@@ -441,7 +442,7 @@ function AddReservationModal({ rooms, selectedDate, projectId, initialRoomId, in
     e.preventDefault();
     if (!formData.purpose) return;
     if (formData.startTime >= formData.endTime) {
-      alert('종료 시간은 시작 시간보다 뒤여야 합니다.');
+      toast.error('종료 시간은 시작 시간보다 뒤여야 합니다.');
       return;
     }
     setIsLoading(true);

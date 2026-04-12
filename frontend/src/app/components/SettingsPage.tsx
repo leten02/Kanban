@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { memberApi, projectApi, ProjectMember } from '../../lib/api';
 import { RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
 import { getAvatarColor } from '../../lib/avatarUtils';
@@ -75,8 +76,8 @@ export function SettingsPage({ projectId, projectName, projectDescription, onDel
       await memberApi.remove(projectId, memberId);
       setMembers(prev => prev.filter(m => m.id !== memberId));
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ?? '멤버 제거 실패';
-      alert(msg);
+      const msg = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ?? '멤버 제거에 실패했습니다';
+      toast.error(msg);
     }
   };
 
@@ -86,8 +87,8 @@ export function SettingsPage({ projectId, projectName, projectDescription, onDel
       await projectApi.delete(projectId);
       onDeleteProject();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ?? '프로젝트 삭제 실패';
-      alert(msg);
+      const msg = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ?? '프로젝트 삭제에 실패했습니다';
+      toast.error(msg);
       setDeleting(false);
       setConfirmDelete(false);
     }

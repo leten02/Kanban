@@ -9,6 +9,7 @@ class TaskCreate(BaseModel):
     assignee_user_id: int | None = None
     assignee_member_id: int | None = None
     priority: Literal["low", "medium", "high"] = "medium"
+    start_date: date | None = None
     due_date: date | None = None
     tags: list[str] = []
 
@@ -19,6 +20,7 @@ class TaskUpdate(BaseModel):
     assignee_user_id: int | None = None
     assignee_member_id: int | None = None
     priority: Literal["low", "medium", "high"] | None = None
+    start_date: date | None = None
     due_date: date | None = None
     tags: list[str] | None = None
 
@@ -38,6 +40,7 @@ class TaskOut(BaseModel):
     assignee_user_id: int | None
     assignee_member_id: int | None = None
     assignee_name: str | None = None
+    start_date: date | None = None
     due_date: date | None
     tags: list[str] = []
     model_config = ConfigDict(from_attributes=True)

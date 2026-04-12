@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Plus, X, Edit2, Trash2, FileText, Eye, Code, Loader2 } from 'lucide-react';
@@ -33,7 +34,7 @@ export function DocumentManagement({ projectId }: DocumentManagementProps) {
       setShowCreateModal(false);
       setSelectedDoc(res.data);
     } catch (e) {
-      alert('문서 생성 실패');
+      toast.error('문서 생성에 실패했습니다');
       console.error(e);
     }
   };
@@ -45,7 +46,7 @@ export function DocumentManagement({ projectId }: DocumentManagementProps) {
       setSelectedDoc(res.data);
       setIsEditing(false);
     } catch (e) {
-      alert('문서 저장 실패');
+      toast.error('문서 저장에 실패했습니다');
       console.error(e);
     }
   };
@@ -57,7 +58,7 @@ export function DocumentManagement({ projectId }: DocumentManagementProps) {
       setDocuments(prev => prev.filter(doc => doc.id !== id));
       if (selectedDoc?.id === id) setSelectedDoc(null);
     } catch (e) {
-      alert('문서 삭제 실패');
+      toast.error('문서 삭제에 실패했습니다');
       console.error(e);
     }
   };
@@ -68,9 +69,9 @@ export function DocumentManagement({ projectId }: DocumentManagementProps) {
   };
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-200px)]">
+    <div className="flex flex-col md:flex-row gap-4 md:h-[calc(100vh-200px)]">
       {/* 문서 목록 */}
-      <div className="w-80 bg-white rounded-lg border border-neutral-200 p-4 overflow-y-auto">
+      <div className="w-full md:w-72 lg:w-80 bg-white rounded-lg border border-neutral-200 p-4 overflow-y-auto md:max-h-none max-h-64">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-neutral-600" />
