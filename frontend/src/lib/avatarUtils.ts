@@ -1,0 +1,11 @@
+const AVATAR_COLORS = [
+  'bg-red-400', 'bg-blue-400', 'bg-green-400', 'bg-yellow-400',
+  'bg-purple-400', 'bg-pink-400', 'bg-indigo-400', 'bg-orange-400',
+  'bg-teal-400', 'bg-cyan-400',
+];
+
+export function getAvatarColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}

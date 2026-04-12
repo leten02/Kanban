@@ -1,24 +1,13 @@
 import { useState, useEffect } from 'react';
 import { memberApi, projectApi, ProjectMember } from '../../lib/api';
 import { RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
+import { getAvatarColor } from '../../lib/avatarUtils';
 
 interface SettingsPageProps {
   projectId: number;
   projectName: string;
   projectDescription: string | null;
   onDeleteProject: () => void;
-}
-
-const AVATAR_COLORS = [
-  'bg-red-400', 'bg-blue-400', 'bg-green-400', 'bg-yellow-400',
-  'bg-purple-400', 'bg-pink-400', 'bg-indigo-400', 'bg-orange-400',
-  'bg-teal-400', 'bg-cyan-400',
-];
-
-function getAvatarColor(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
 function MemberAvatar({ member }: { member: ProjectMember }) {

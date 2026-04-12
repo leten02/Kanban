@@ -10,7 +10,7 @@ from app.core.config import settings
 from app.core.database import engine
 from app.models import Base
 from app.models import user, project, epic, task, subtask, meeting_reservation, project_member, task_tag, task_comment, document  # noqa: F401
-from app.routers import auth, projects, epics, tasks, subtasks, rooms, teams, meeting_rooms, documents
+from app.routers import auth, projects, epics, tasks, subtasks, teams, meeting_rooms, documents
 from app.routers import project_members
 
 logger = logging.getLogger(__name__)
@@ -56,7 +56,6 @@ app.include_router(projects.router)
 app.include_router(epics.router)
 app.include_router(tasks.router)
 app.include_router(subtasks.router)
-app.include_router(rooms.router)
 app.include_router(teams.router)
 app.include_router(meeting_rooms.router)
 app.include_router(project_members.router)

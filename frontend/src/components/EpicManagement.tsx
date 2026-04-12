@@ -16,7 +16,10 @@ export function EpicManagement({ projectId }: EpicManagementProps) {
 
   useEffect(() => {
     setIsLoading(true);
-    epicApi.list(projectId).then(res => setEpics(res.data)).finally(() => setIsLoading(false));
+    epicApi.list(projectId)
+      .then(res => setEpics(res.data))
+      .catch(err => console.error('에픽 로드 실패:', err))
+      .finally(() => setIsLoading(false));
   }, [projectId]);
 
   const handleCreateEpic = async (data: { title: string; end_date?: string }) => {

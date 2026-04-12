@@ -82,28 +82,6 @@ export interface Subtask {
   task_progress?: number | null;
 }
 
-export interface MeetingRoom {
-  id: number;
-  name: string;
-  capacity: number;
-  building?: string;
-  floor?: string;
-}
-
-export interface MeetingReservation {
-  id: number;
-  room_id: number;
-  date: string;
-  start_time: string;
-  end_time: string;
-  purpose: string;
-  user_email: string;
-  attendee_emails: string[];
-  gcs_reservation_id?: string;
-  google_calendar_event_id?: string;
-  created_at: string;
-}
-
 export const authApi = {
   getGoogleLoginUrl: (callbackUrl?: string) =>
     api.get<{ url: string }>('/auth/google/login', { params: callbackUrl ? { callback_url: callbackUrl } : {} }),
@@ -270,19 +248,4 @@ export const documentApi = {
   update: (id: number, data: { title?: string; content?: string }) =>
     api.patch<Document>(`/documents/${id}`, data),
   delete: (id: number) => api.delete(`/documents/${id}`),
-};
-
-export const roomApi = {
-  list: () => api.get<MeetingRoom[]>('/meeting-rooms'),
-  getReservations: (roomId: number, date: string) =>
-    api.get<MeetingReservation[]>(`/meeting-rooms/${roomId}/reservations`, { params: { date } }),
-  book: (roomId: number, data: {
-    date: string;
-    start_time: string;
-    end_time: string;
-    purpose: string;
-    attendee_emails?: string[];
-  }) => api.post<MeetingReservation>(`/meeting-rooms/${roomId}/reservations`, data),
-  cancel: (reservationId: number) =>
-    api.delete(`/meeting-rooms/reservations/${reservationId}`),
 };

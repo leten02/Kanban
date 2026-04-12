@@ -1,6 +1,7 @@
 import { useDrag } from 'react-dnd';
 import { Task } from '../App';
 import { CheckSquare, Calendar } from 'lucide-react';
+import { getAvatarColor } from '../../lib/avatarUtils';
 
 interface TaskCardProps {
   task: Task;
@@ -48,16 +49,6 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
     })
   }));
 
-  const getAvatarColor = (name: string) => {
-    const colors = [
-      'bg-red-400', 'bg-blue-400', 'bg-green-400', 'bg-yellow-400',
-      'bg-purple-400', 'bg-pink-400', 'bg-indigo-400', 'bg-orange-400',
-      'bg-teal-400', 'bg-cyan-400',
-    ];
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    return colors[Math.abs(hash) % colors.length];
-  };
 
   const getTagColor = (tag: string) => {
     const tagLower = tag.toLowerCase();

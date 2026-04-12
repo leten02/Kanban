@@ -38,7 +38,23 @@ async def get_tasks(
         query = query.where(Task.status == status)
     result = await db.execute(query)
     tasks = list(result.scalars().all())
-    return [await _task_to_dict(db, t) for t in tasks]
+    if not tasks:
+        return []
+    # Batch-fetch all tags in one query (avoids N+1)
+    task_ids = [t.id for t in tasks]
+    tags_result = await db.execute(
+        select(TaskTag.task_id, TaskTag.tag).where(TaskTag.task_id.in_(task_ids))
+    )
+    tags_by_task: dict[int, list[str]] = {}
+    for task_id, tag in tags_result.all():
+        tags_by_task.setdefault(task_id, []).append(tag)
+    return [
+        {
+            **{col.name: getattr(t, col.name) for col in Task.__table__.columns},
+            "tags": tags_by_task.get(t.id, []),
+        }
+        for t in tasks
+    ]
 
 
 async def get_task(db: AsyncSession, task_id: int) -> Task | None:

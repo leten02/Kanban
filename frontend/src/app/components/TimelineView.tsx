@@ -1,6 +1,7 @@
 import { Task } from '../App';
 import { useState } from 'react';
 import { Trash2, User } from 'lucide-react';
+import { getAvatarColor } from '../../lib/avatarUtils';
 
 interface TimelineViewProps {
   tasks: Task[];
@@ -80,19 +81,6 @@ export function TimelineView({ tasks, updateTask, deleteTask }: TimelineViewProp
 
   const getInitials = (name: string) => {
     return name.charAt(0);
-  };
-
-  const getAvatarColor = (name: string) => {
-    const colors = [
-      'bg-blue-500',
-      'bg-green-500',
-      'bg-purple-500',
-      'bg-pink-500',
-      'bg-amber-500',
-      'bg-cyan-500'
-    ];
-    const index = name.charCodeAt(0) % colors.length;
-    return colors[index];
   };
 
   return (

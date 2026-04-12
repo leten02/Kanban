@@ -115,9 +115,18 @@ function AppContent() {
   };
 
   useEffect(() => {
-    if (!selectedProject) return;
-    taskApi.list(selectedProject.id).then(res => setTasks(res.data.map(apiTaskToFrontend)));
-    epicApi.list(selectedProject.id).then(res => setEpicsForProject(res.data));
+    if (!selectedProject) {
+      setSelectedTask(null);
+      setBoardFilters({ search: '', assigneeMemberId: null, priority: null, tag: null });
+      setViewMode('board');
+      return;
+    }
+    taskApi.list(selectedProject.id)
+      .then(res => setTasks(res.data.map(apiTaskToFrontend)))
+      .catch(err => console.error('태스크 로드 실패:', err));
+    epicApi.list(selectedProject.id)
+      .then(res => setEpicsForProject(res.data))
+      .catch(err => console.error('에픽 로드 실패:', err));
   }, [selectedProject]);
 
   if (isLoading) {
@@ -170,6 +179,7 @@ function AppContent() {
   };
 
   const deleteTask = (taskId: string) => {
+    if (selectedTask?.id === taskId) setSelectedTask(null);
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
     taskApi.delete(Number(taskId)).catch(console.error);
   };

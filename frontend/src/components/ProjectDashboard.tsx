@@ -11,7 +11,10 @@ export function ProjectDashboard() {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
 
   useEffect(() => {
-    projectApi.list().then(res => setProjects(res.data)).finally(() => setIsLoading(false));
+    projectApi.list()
+      .then(res => setProjects(res.data))
+      .catch(err => console.error('프로젝트 로드 실패:', err))
+      .finally(() => setIsLoading(false));
   }, []);
 
   const [isCreating, setIsCreating] = useState(false);
