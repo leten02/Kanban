@@ -190,6 +190,8 @@ export interface SchoolReservation {
   end_at: string;
   purpose?: string;
   can_cancel: boolean;
+  room_name?: string;
+  room_location?: string;
 }
 
 export const schoolApi = {

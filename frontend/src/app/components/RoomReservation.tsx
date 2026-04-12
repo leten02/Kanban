@@ -10,6 +10,7 @@ export function RoomReservation({ projectId }: { projectId?: number }) {
   const [activeTab, setActiveTab] = useState<RoomTab>('timetable');
   const [myReservations, setMyReservations] = useState<SchoolReservation[]>([]);
   const [myResLoading, setMyResLoading] = useState(false);
+  const [myResError, setMyResError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [rooms, setRooms] = useState<SchoolRoom[]>([]);
   const [reservations, setReservations] = useState<SchoolReservation[]>([]);
@@ -73,9 +74,13 @@ export function RoomReservation({ projectId }: { projectId?: number }) {
   useEffect(() => {
     if (activeTab !== 'my') return;
     setMyResLoading(true);
+    setMyResError(null);
     schoolApi.myReservations()
       .then(r => setMyReservations(r.data))
-      .catch(() => setMyReservations([]))
+      .catch(() => {
+        setMyResError('예약 목록을 불러오지 못했습니다. 1000school 연동이 필요할 수 있습니다.');
+        setMyReservations([]);
+      })
       .finally(() => setMyResLoading(false));
   }, [activeTab]);
 
@@ -117,15 +122,27 @@ export function RoomReservation({ projectId }: { projectId?: number }) {
     }
   };
 
-  const handleCancelReservation = async (reservation: SchoolReservation) => {
-    if (!window.confirm('예약을 취소하시겠습니까?')) return;
-    try {
-      await schoolApi.deleteReservation(reservation.id);
-      setMyReservations(prev => prev.filter(r => r.id !== reservation.id));
-    } catch (e: unknown) {
-      const err = e as { response?: { data?: { detail?: string } } };
-      toast.error(err?.response?.data?.detail || '예약 취소에 실패했습니다');
-    }
+  const handleCancelReservation = (reservation: SchoolReservation) => {
+    toast('예약을 취소하시겠습니까?', {
+      description: reservation.room_name
+        ? `${reservation.room_name} · ${new Date(reservation.start_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}`
+        : undefined,
+      action: {
+        label: '취소하기',
+        onClick: async () => {
+          try {
+            await schoolApi.deleteReservation(reservation.id);
+            setMyReservations(prev => prev.filter(r => r.id !== reservation.id));
+            await loadData(selectedDate);
+            toast.success('예약이 취소되었습니다.');
+          } catch (e: unknown) {
+            const err = e as { response?: { data?: { detail?: string } } };
+            toast.error(err?.response?.data?.detail || '예약 취소에 실패했습니다');
+          }
+        },
+      },
+      cancel: { label: '닫기' },
+    });
   };
 
   const timeSlots = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => i + START_HOUR);
@@ -211,6 +228,11 @@ export function RoomReservation({ projectId }: { projectId?: number }) {
             <div className="flex items-center justify-center py-10">
               <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
             </div>
+          ) : myResError ? (
+            <div className="flex flex-col items-center justify-center py-16 text-neutral-400 gap-2">
+              <AlertCircle className="w-8 h-8 text-red-300" />
+              <p className="text-sm text-red-500">{myResError}</p>
+            </div>
           ) : myReservations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-neutral-400">
               <CalendarCheck className="w-10 h-10 mb-3 text-neutral-300" />
@@ -223,14 +245,15 @@ export function RoomReservation({ projectId }: { projectId?: number }) {
                 const end = new Date(r.end_at);
                 const fmt = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
                 const dateStr = start.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+                const roomLabel = r.room_name || `회의실 ${r.meeting_room_id}`;
                 return (
                   <div key={r.id} className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors">
                     <div>
-                      <p className="text-sm font-medium">{dateStr}</p>
-                      <p className="text-sm text-neutral-600">{fmt(start)} – {fmt(end)}</p>
+                      <p className="text-sm font-semibold text-neutral-800">{roomLabel}</p>
+                      <p className="text-sm text-neutral-600">{dateStr} · {fmt(start)} – {fmt(end)}</p>
                       {r.purpose && <p className="text-xs text-neutral-500 mt-0.5">{r.purpose}</p>}
                     </div>
-                    {r.can_cancel && (
+                    {r.can_cancel !== false && (
                       <button
                         onClick={() => handleCancelReservation(r)}
                         className="flex items-center gap-1 px-3 py-1.5 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
