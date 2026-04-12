@@ -100,7 +100,7 @@ Jira/GitHub Projects에 익숙하지 않은 소규모 팀(3명)을 위한 단순
 
 ## 7. 비기능 요구사항
 
-- 배포: Railway (백엔드) / Vercel 또는 Railway Static (프론트엔드)
+- 배포: Railway (백엔드 + PostgreSQL) / Vercel (프론트엔드)
 - 응답 속도: 일반 CRUD 200ms 이내
-- 동시 사용자: 최대 10명 (SQLite 적합 범위)
+- 동시 사용자: 최대 50명 (PostgreSQL + Railway 적합 범위)
 - API 문서: Swagger UI (`http://localhost:8000/docs`) 자동 제공
