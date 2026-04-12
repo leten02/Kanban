@@ -368,6 +368,8 @@ export function RoomReservation({ projectId }: { projectId?: number }) {
         </div>
       )}
 
+    </>)}
+
       {showAddModal && rooms.length > 0 && (
         <AddReservationModal
           rooms={rooms}
@@ -391,7 +393,6 @@ export function RoomReservation({ projectId }: { projectId?: number }) {
         />
       )}
 
-    </>)}
     </div>
   );
 }
