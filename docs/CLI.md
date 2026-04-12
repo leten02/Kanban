@@ -1,4 +1,121 @@
-# CLI 레퍼런스 — Kanban 도구
+# API 레퍼런스
+
+백엔드 실행 후 **`http://localhost:8000/docs`** 에서 Swagger UI로 전체 API를 확인하고 직접 테스트할 수 있다.
+
+> **참고**: 아래 모든 엔드포인트는 `Authorization: Bearer <token>` 헤더 필요.
+> 로그인 후 응답받은 토큰을 사용한다.
+
+---
+
+## 1. 인증
+
+| Method | Path | 설명 |
+|--------|------|------|
+| `GET` | `/auth/google/login` | Google OAuth 리다이렉트 URL 반환 |
+| `GET` | `/auth/google/callback` | OAuth 콜백 처리 · Bearer 토큰 발급 |
+| `GET` | `/auth/me` | 현재 로그인 유저 정보 |
+| `POST` | `/auth/logout` | 로그아웃 |
+| `POST` | `/auth/1000school/link` | 1000school API 토큰 연결 |
+
+---
+
+## 2. 프로젝트
+
+| Method | Path | 설명 |
+|--------|------|------|
+| `GET` | `/projects` | 프로젝트 목록 |
+| `POST` | `/projects` | 프로젝트 생성 |
+| `GET` | `/projects/{id}` | 프로젝트 상세 |
+| `PATCH` | `/projects/{id}` | 프로젝트 수정 |
+| `DELETE` | `/projects/{id}` | 프로젝트 삭제 (하위 전체 CASCADE) |
+
+---
+
+## 3. 프로젝트 멤버
+
+| Method | Path | 설명 |
+|--------|------|------|
+| `GET` | `/api/projects/{id}/members` | 멤버 목록 |
+| `POST` | `/api/projects/{id}/members/sync` | 1000school 팀원 동기화 |
+| `PATCH` | `/api/projects/{id}/members/{mid}` | 역할 변경 (admin/member) |
+| `DELETE` | `/api/projects/{id}/members/{mid}` | 멤버 제거 |
+| `GET` | `/api/projects/{id}/assignee-suggestions` | 담당자 제안 (빈도순) |
+| `GET` | `/api/projects/{id}/tags` | 프로젝트 내 사용된 태그 목록 |
+
+---
+
+## 4. 에픽 (WBS Level 1)
+
+| Method | Path | 설명 |
+|--------|------|------|
+| `GET` | `/projects/{id}/epics` | 에픽 목록 (진행률 포함) |
+| `POST` | `/projects/{id}/epics` | 에픽 생성 |
+| `PATCH` | `/epics/{id}` | 에픽 수정 |
+| `DELETE` | `/epics/{id}` | 에픽 삭제 |
+
+---
+
+## 5. 태스크 (WBS Level 2 / 칸반 카드)
+
+| Method | Path | 설명 |
+|--------|------|------|
+| `GET` | `/projects/{id}/tasks` | 태스크 목록 |
+| `POST` | `/epics/{id}/tasks` | 태스크 생성 |
+| `PATCH` | `/tasks/{id}` | 태스크 수정 (제목·설명·담당자·우선순위·태그·마감일) |
+| `PATCH` | `/tasks/{id}/status` | 칸반 상태 변경 |
+| `DELETE` | `/tasks/{id}` | 태스크 삭제 |
+
+---
+
+## 6. 댓글
+
+| Method | Path | 설명 |
+|--------|------|------|
+| `GET` | `/tasks/{id}/comments` | 댓글 목록 |
+| `POST` | `/tasks/{id}/comments` | 댓글 작성 · body: `{ "content": "..." }` |
+| `DELETE` | `/tasks/comments/{cid}` | 댓글 삭제 (본인만) |
+
+---
+
+## 7. 서브태스크 (WBS Level 3)
+
+| Method | Path | 설명 |
+|--------|------|------|
+| `GET` | `/tasks/{id}/subtasks` | 서브태스크 목록 |
+| `POST` | `/tasks/{id}/subtasks` | 서브태스크 생성 |
+| `PATCH` | `/subtasks/{id}` | 서브태스크 수정·완료 처리 |
+| `DELETE` | `/subtasks/{id}` | 서브태스크 삭제 |
+
+---
+
+## 8. 회의실
+
+| Method | Path | 설명 |
+|--------|------|------|
+| `GET` | `/api/meeting-rooms` | 회의실 목록 (1000school proxy) |
+| `GET` | `/api/meeting-rooms/{id}/reservations` | 날짜별 예약 현황 · query: `date=YYYY-MM-DD` |
+| `POST` | `/api/meeting-rooms/{id}/reservations` | 예약 생성 + Google Calendar 이벤트 |
+| `DELETE` | `/api/meeting-rooms/reservations/{id}` | 예약 취소 + Calendar 이벤트 삭제 |
+| `GET` | `/api/meeting-rooms/my-reservations` | 오늘 이후 내 예약 목록 |
+
+**예약 생성 body 예시**:
+```json
+{
+  "start_at": "2026-04-16T10:00:00",
+  "end_at": "2026-04-16T11:00:00",
+  "purpose": "주간 싱크",
+  "attendee_emails": ["alice@gachon.ac.kr", "bob@gachon.ac.kr"]
+}
+```
+
+---
+
+## 9. 팀
+
+| Method | Path | 설명 |
+|--------|------|------|
+| `GET` | `/teams/me` | 내 팀 정보 + 멤버 목록 (1000school proxy) |
+
 
 `kanban` 명령어로 서버의 모든 기능을 터미널에서 실행할 수 있다.
 
