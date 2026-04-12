@@ -53,7 +53,16 @@ async def sync_members(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    token = current_user.school_api_token or settings.gcs_pulse_token
+    from app.core.security import decrypt
+    _raw = current_user.school_api_token
+    if _raw:
+        try:
+            token = decrypt(_raw)
+        except Exception:
+            # 기존 평문 저장 데이터 호환 (마이그레이션 경로)
+            token = _raw
+    else:
+        token = settings.gcs_pulse_token
     if not token:
         raise HTTPException(status_code=400, detail="No school API token available")
 

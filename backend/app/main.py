@@ -1,3 +1,5 @@
+import logging
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -11,9 +13,21 @@ from app.models import user, project, epic, task, subtask, meeting_reservation, 
 from app.routers import auth, projects, epics, tasks, subtasks, rooms, teams, meeting_rooms
 from app.routers import project_members
 
+logger = logging.getLogger(__name__)
+
+_DEV_SECRET = "dev-secret-key-change-in-production"
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 프로덕션 환경에서 기본 SECRET_KEY 사용 시 경고
+    is_postgres = settings.database_url.startswith(("postgresql", "postgres"))
+    if is_postgres and settings.secret_key == _DEV_SECRET:
+        logger.critical(
+            "⚠️  SECRET_KEY is set to the default dev value in a production environment. "
+            "Set SECRET_KEY to a random secret (openssl rand -hex 32) immediately."
+        )
+        raise RuntimeError("SECRET_KEY must be changed before running in production.")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield

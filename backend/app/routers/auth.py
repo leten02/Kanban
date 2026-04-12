@@ -153,7 +153,7 @@ async def link_school(
         if r.status_code != 200:
             raise HTTPException(400, "유효하지 않은 1000school API 토큰입니다.")
 
-    current_user.school_api_token = req.api_token
+    current_user.school_api_token = encrypt(req.api_token)
     await db.commit()
 
     return {"ok": True, "has_school_token": True}
