@@ -14,10 +14,18 @@ export function ProjectDashboard() {
     projectApi.list().then(res => setProjects(res.data)).finally(() => setIsLoading(false));
   }, []);
 
+  const [isCreating, setIsCreating] = useState(false);
+
   const handleCreateProject = async (data: { name: string; description?: string }) => {
-    const res = await projectApi.create(data);
-    setProjects(prev => [...prev, res.data]);
-    setShowCreateModal(false);
+    if (isCreating) return;
+    setIsCreating(true);
+    try {
+      const res = await projectApi.create(data);
+      setProjects(prev => [...prev, res.data]);
+      setShowCreateModal(false);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const handleUpdateProject = async (id: number, data: { name?: string; description?: string }) => {
@@ -139,7 +147,7 @@ export function ProjectDashboard() {
 interface ProjectFormModalProps {
   project?: Project;
   onClose: () => void;
-  onSubmit: (data: { name: string; description?: string }) => void;
+  onSubmit: (data: { name: string; description?: string }) => Promise<void> | void;
 }
 
 function ProjectFormModal({ project, onClose, onSubmit }: ProjectFormModalProps) {
@@ -147,11 +155,17 @@ function ProjectFormModal({ project, onClose, onSubmit }: ProjectFormModalProps)
     name: project?.name || '',
     description: project?.description || '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim()) return;
-    onSubmit(formData);
+    if (!formData.name.trim() || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onSubmit(formData);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -202,7 +216,8 @@ function ProjectFormModal({ project, onClose, onSubmit }: ProjectFormModalProps)
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors"
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {project ? '수정' : '생성'}
             </button>
