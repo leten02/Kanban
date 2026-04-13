@@ -10,6 +10,7 @@ from starlette.responses import RedirectResponse
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.security import encrypt
 from app.dependencies import get_current_user
 from app.models.user import User
 from app.schemas.user import UserOut
