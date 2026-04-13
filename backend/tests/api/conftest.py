@@ -67,8 +67,9 @@ async def auth_client(db_session):
     app.dependency_overrides[get_db] = override_get_db
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        # Inject session cookie directly
-        ac.cookies.set("session_user_id", str(user.id))
+        # Inject signed session cookie
+        from app.dependencies import make_session_cookie
+        ac.cookies.set("session_user_id", make_session_cookie(user.id))
         yield ac, user
 
     app.dependency_overrides.clear()

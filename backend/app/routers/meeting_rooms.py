@@ -192,7 +192,7 @@ async def delete_reservation(
             raise HTTPException(403, "본인이 예약한 건만 취소할 수 있습니다.")
         r.raise_for_status()
 
-    # 2. 로컬 DB에서도 삭제
+    # 2. 로컬 DB에서도 삭제 (본인 예약만)
     res = await db.execute(
         select(MeetingReservation).where(
             MeetingReservation.gcs_reservation_id == reservation_id
@@ -200,6 +200,8 @@ async def delete_reservation(
     )
     local = res.scalar_one_or_none()
     if local:
+        if local.reserved_by_user_id != current_user.id:
+            raise HTTPException(403, "본인이 예약한 건만 취소할 수 있습니다.")
         await db.delete(local)
         await db.commit()
 

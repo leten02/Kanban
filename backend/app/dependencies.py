@@ -7,6 +7,24 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.models.user import User
 
+_SESSION_SALT = "web-session"
+_SESSION_MAX_AGE = 30 * 24 * 3600  # 30일
+
+
+def make_session_cookie(user_id: int) -> str:
+    """서명된 세션 쿠키 값을 생성합니다."""
+    s = URLSafeTimedSerializer(settings.secret_key, salt=_SESSION_SALT)
+    return s.dumps(str(user_id))
+
+
+def _parse_session_cookie(value: str) -> int | None:
+    """서명된 쿠키 값을 검증하고 user_id를 반환합니다. 유효하지 않으면 None."""
+    try:
+        s = URLSafeTimedSerializer(settings.secret_key, salt=_SESSION_SALT)
+        return int(s.loads(value, max_age=_SESSION_MAX_AGE))
+    except Exception:
+        return None
+
 
 async def get_current_user(
     authorization: str | None = Header(default=None),
@@ -24,10 +42,7 @@ async def get_current_user(
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     if user_id is None and session_user_id:
-        try:
-            user_id = int(session_user_id)
-        except (ValueError, TypeError):
-            pass
+        user_id = _parse_session_cookie(session_user_id)
 
     if user_id is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")

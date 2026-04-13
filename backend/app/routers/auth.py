@@ -135,7 +135,8 @@ async def google_callback(
     # Browser-based login: set cookie and return user info
     from fastapi.responses import JSONResponse
     response = JSONResponse(content={"id": user.id, "name": name, "email": email, "picture": picture})
-    response.set_cookie("session_user_id", str(user.id), httponly=True, samesite="lax")
+    from app.dependencies import make_session_cookie
+    response.set_cookie("session_user_id", make_session_cookie(user.id), httponly=True, samesite="lax")
     return response
 
 
