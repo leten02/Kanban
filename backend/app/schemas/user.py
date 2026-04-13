@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
 class UserOut(BaseModel):
@@ -9,12 +9,15 @@ class UserOut(BaseModel):
     has_school_token: bool = False
     model_config = ConfigDict(from_attributes=True)
 
+    @model_validator(mode='before')
     @classmethod
-    def from_orm(cls, obj):
-        return cls(
-            id=obj.id,
-            name=obj.name,
-            email=obj.email,
-            picture=obj.picture,
-            has_school_token=bool(obj.school_api_token),
-        )
+    def set_has_school_token(cls, values):
+        if hasattr(values, 'school_api_token'):
+            return {
+                'id': values.id,
+                'name': values.name,
+                'email': values.email,
+                'picture': values.picture,
+                'has_school_token': bool(values.school_api_token),
+            }
+        return values
