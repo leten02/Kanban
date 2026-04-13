@@ -115,6 +115,39 @@ def _build_description(
     return " | ".join(lines)
 
 
+def _build_checklist(changed_files: list[str], commit_msg: str, status: str) -> list[str]:
+    """변경 파일 목록을 체크리스트 항목으로 변환."""
+    items = []
+
+    # 커밋 메시지 첫 줄 추가
+    if commit_msg and commit_msg not in ("HEAD", ""):
+        items.append(f"커밋: {commit_msg}")
+
+    # 변경 파일을 카테고리별로 그룹핑
+    groups: dict[str, list[str]] = {}
+    for f in changed_files:
+        category = "기타"
+        for patterns, cat in _CATEGORY_MAP:
+            if any(p in f for p in patterns):
+                category = cat
+                break
+        groups.setdefault(category, []).append(f)
+
+    # 파일이 5개 이하면 개별 항목으로, 많으면 카테고리 요약
+    total = sum(len(v) for v in groups.values())
+    if total <= 7:
+        for f in changed_files[:10]:
+            # 파일명만 추출 (경로 마지막 부분)
+            fname = f.split("/")[-1] if "/" in f else f
+            action = "수정" if status == "done" else "예정"
+            items.append(f"{fname} {action}")
+    else:
+        for cat, files in groups.items():
+            items.append(f"{cat} ({len(files)}개 파일)")
+
+    return items
+
+
 @sync_app.command("run")
 def run_sync(
     epic_id: int = typer.Argument(..., metavar="epic-id", help="등록할 에픽 ID"),
@@ -195,10 +228,20 @@ def run_sync(
     if status != "todo":
         client.patch(f"/tasks/{task_id}/status", json={"status": status})
 
+    # 6. 변경 파일 → 체크리스트 항목으로 등록
+    checklist_items = _build_checklist(changed_files, commit_msg, status)
+    for item in checklist_items:
+        try:
+            client.post(f"/tasks/{task_id}/subtasks", json={"title": item})
+        except Exception:
+            pass
+
     icon = "📋" if status == "todo" else "✅"
     console.print(f"\n[bold green]{icon} 태스크 등록 완료![/bold green]")
     console.print(f"   ID: [bold]{task_id}[/bold]  제목: {auto_title}")
     console.print(f"   상태: {status}  우선순위: {auto_priority}")
+    if checklist_items:
+        console.print(f"   체크리스트: {len(checklist_items)}개 항목")
     console.print(f"\n   🌐 [link=https://1000school-kanban.vercel.app]https://1000school-kanban.vercel.app[/link]")
 
 
