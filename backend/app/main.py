@@ -33,11 +33,19 @@ async def lifespan(app: FastAPI):
         # 스키마 마이그레이션: epic_id NOT NULL → nullable (create_all은 기존 컬럼 변경 안 함)
         is_pg = settings.database_url.startswith(("postgresql", "postgres"))
         if is_pg:
-            await conn.execute(
-                __import__("sqlalchemy").text(
-                    "ALTER TABLE tasks ALTER COLUMN epic_id DROP NOT NULL"
-                )
-            )
+            # 이미 nullable이면 에러 없이 넘어가도록 처리
+            from sqlalchemy import text
+            await conn.execute(text("""
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='tasks' AND column_name='epic_id' AND is_nullable='NO'
+                    ) THEN
+                        ALTER TABLE tasks ALTER COLUMN epic_id DROP NOT NULL;
+                    END IF;
+                END $$;
+            """))
     yield
 
 
