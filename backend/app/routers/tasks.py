@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.crud import epics as epics_crud
 from app.crud import tasks as crud
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, require_project_member
 from app.models.task_comment import TaskComment
 from app.models.user import User
 from app.schemas.task import TaskCreate, TaskOut, TaskStatusUpdate, TaskUpdate
@@ -21,6 +21,7 @@ async def list_tasks(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    await require_project_member(project_id, current_user, db)
     return await crud.get_tasks(db, project_id, status)
 
 
@@ -33,6 +34,7 @@ async def create_task_for_project(
 ):
     """에픽 없이 프로젝트에 바로 태스크 생성 (epic_id = null)."""
     from app.crud import projects as projects_crud
+    await require_project_member(project_id, current_user, db)
     project = await projects_crud.get_project(db, project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -50,6 +52,7 @@ async def create_task(
     epic = await epics_crud.get_epic(db, epic_id)
     if epic is None:
         raise HTTPException(status_code=404, detail="Epic not found")
+    await require_project_member(epic.project_id, current_user, db)
     return await crud.create_task(db, epic.project_id, data, current_user.id, epic_id=epic_id)
 
 
@@ -63,6 +66,7 @@ async def update_task(
     task = await crud.get_task(db, task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    await require_project_member(task.project_id, current_user, db)
     return await crud.update_task(db, task, data)
 
 
@@ -76,6 +80,7 @@ async def update_task_status(
     task = await crud.get_task(db, task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    await require_project_member(task.project_id, current_user, db)
     return await crud.update_task_status(db, task, data.status)
 
 
@@ -88,6 +93,7 @@ async def delete_task(
     task = await crud.get_task(db, task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    await require_project_member(task.project_id, current_user, db)
     await crud.delete_task(db, task)
     return Response(status_code=204)
 
@@ -127,6 +133,10 @@ async def list_comments(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    task = await crud.get_task(db, task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    await require_project_member(task.project_id, current_user, db)
     result = await db.execute(
         select(TaskComment)
         .where(TaskComment.task_id == task_id)
@@ -145,6 +155,7 @@ async def create_comment(
     task = await crud.get_task(db, task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    await require_project_member(task.project_id, current_user, db)
     comment = TaskComment(
         task_id=task_id,
         author_user_id=current_user.id,

@@ -37,3 +37,32 @@ async def get_current_user(
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     return user
+
+
+async def require_project_member(
+    project_id: int,
+    current_user: User,
+    db: AsyncSession,
+) -> None:
+    """프로젝트 생성자이거나 프로젝트 멤버가 아닌 경우 403을 반환합니다."""
+    from app.models.project import Project
+    from app.models.project_member import ProjectMember
+
+    proj_result = await db.execute(select(Project).where(Project.id == project_id))
+    project = proj_result.scalar_one_or_none()
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if project.created_by_user_id == current_user.id:
+        return
+
+    member_result = await db.execute(
+        select(ProjectMember).where(
+            ProjectMember.project_id == project_id,
+            ProjectMember.email == current_user.email,
+        )
+    )
+    if member_result.scalar_one_or_none() is not None:
+        return
+
+    raise HTTPException(status_code=403, detail="이 프로젝트에 접근할 권한이 없습니다.")

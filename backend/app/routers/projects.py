@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.crud import projects as crud
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, require_project_member
 from app.models.user import User
 from app.schemas.project import ProjectCreate, ProjectOut, ProjectUpdate
 
@@ -15,7 +15,7 @@ async def list_projects(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await crud.get_projects(db)
+    return await crud.get_projects(db, current_user.id, current_user.email)
 
 
 @router.post("", response_model=ProjectOut, status_code=201)
@@ -34,6 +34,7 @@ async def get_project(
     current_user: User = Depends(get_current_user),
 ):
     from fastapi import HTTPException
+    await require_project_member(project_id, current_user, db)
     project = await crud.get_project(db, project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -48,6 +49,7 @@ async def update_project(
     current_user: User = Depends(get_current_user),
 ):
     from fastapi import HTTPException
+    await require_project_member(project_id, current_user, db)
     project = await crud.get_project(db, project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -61,6 +63,7 @@ async def delete_project(
     current_user: User = Depends(get_current_user),
 ):
     from fastapi import HTTPException
+    await require_project_member(project_id, current_user, db)
     project = await crud.get_project(db, project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")

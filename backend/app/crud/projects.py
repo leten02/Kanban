@@ -1,12 +1,21 @@
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.project import Project
+from app.models.project_member import ProjectMember
 from app.schemas.project import ProjectCreate, ProjectUpdate
 
 
-async def get_projects(db: AsyncSession) -> list[Project]:
-    result = await db.execute(select(Project))
+async def get_projects(db: AsyncSession, user_id: int, user_email: str) -> list[Project]:
+    member_subq = select(ProjectMember.project_id).where(ProjectMember.email == user_email)
+    result = await db.execute(
+        select(Project).where(
+            or_(
+                Project.created_by_user_id == user_id,
+                Project.id.in_(member_subq),
+            )
+        )
+    )
     return list(result.scalars().all())
 
 

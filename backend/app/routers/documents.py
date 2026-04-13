@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, require_project_member
 from app.models.document import Document
 from app.models.user import User
 from app.schemas.document import DocumentCreate, DocumentOut, DocumentUpdate
@@ -17,6 +17,7 @@ async def list_documents(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    await require_project_member(project_id, current_user, db)
     result = await db.execute(
         select(Document)
         .where(Document.project_id == project_id)
@@ -32,6 +33,7 @@ async def create_document(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    await require_project_member(project_id, current_user, db)
     doc = Document(project_id=project_id, title=data.title, content=data.content)
     db.add(doc)
     await db.commit()
@@ -50,6 +52,7 @@ async def update_document(
     doc = result.scalar_one_or_none()
     if not doc:
         raise HTTPException(404, "문서를 찾을 수 없습니다.")
+    await require_project_member(doc.project_id, current_user, db)
     if data.title is not None:
         doc.title = data.title
     if data.content is not None:
@@ -69,5 +72,6 @@ async def delete_document(
     doc = result.scalar_one_or_none()
     if not doc:
         raise HTTPException(404, "문서를 찾을 수 없습니다.")
+    await require_project_member(doc.project_id, current_user, db)
     await db.delete(doc)
     await db.commit()

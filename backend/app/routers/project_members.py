@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, require_project_member
 from app.models.project_member import ProjectMember
 from app.models.task import Task
 from app.models.task_tag import TaskTag
@@ -41,6 +41,7 @@ async def list_members(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    await require_project_member(project_id, current_user, db)
     result = await db.execute(
         select(ProjectMember).where(ProjectMember.project_id == project_id)
     )
@@ -53,6 +54,7 @@ async def sync_members(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    await require_project_member(project_id, current_user, db)
     from app.core.security import decrypt
     _raw = current_user.school_api_token
     if _raw:
@@ -125,6 +127,7 @@ async def update_member_role(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    await require_project_member(project_id, current_user, db)
     result = await db.execute(
         select(ProjectMember).where(
             ProjectMember.id == member_id,
@@ -147,6 +150,7 @@ async def remove_member(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    await require_project_member(project_id, current_user, db)
     result = await db.execute(
         select(ProjectMember).where(
             ProjectMember.id == member_id,
@@ -167,6 +171,7 @@ async def assignee_suggestions(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    await require_project_member(project_id, current_user, db)
     # Return members ordered by how many tasks they've been assigned in this project
     count_col = func.count(Task.id).label("assignment_count")
     result = await db.execute(
@@ -190,6 +195,7 @@ async def project_tags(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    await require_project_member(project_id, current_user, db)
     count_col = func.count(TaskTag.id).label("cnt")
     result = await db.execute(
         select(TaskTag.tag, count_col)

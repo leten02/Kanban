@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.crud import subtasks as crud
 from app.crud import tasks as tasks_crud
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, require_project_member
 from app.models.user import User
 from app.schemas.subtask import SubtaskCreate, SubtaskOut, SubtaskUpdate
 
@@ -20,6 +20,7 @@ async def list_subtasks(
     task = await tasks_crud.get_task(db, task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    await require_project_member(task.project_id, current_user, db)
     return await crud.get_subtasks(db, task_id)
 
 
@@ -33,6 +34,7 @@ async def create_subtask(
     task = await tasks_crud.get_task(db, task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    await require_project_member(task.project_id, current_user, db)
     return await crud.create_subtask(db, task_id, data, current_user.id)
 
 
@@ -46,6 +48,10 @@ async def update_subtask(
     subtask = await crud.get_subtask(db, subtask_id)
     if subtask is None:
         raise HTTPException(status_code=404, detail="Subtask not found")
+    task = await tasks_crud.get_task(db, subtask.task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    await require_project_member(task.project_id, current_user, db)
     subtask = await crud.update_subtask(db, subtask, data)
     out = SubtaskOut.model_validate(subtask)
     if data.is_completed is not None:
@@ -62,5 +68,9 @@ async def delete_subtask(
     subtask = await crud.get_subtask(db, subtask_id)
     if subtask is None:
         raise HTTPException(status_code=404, detail="Subtask not found")
+    task = await tasks_crud.get_task(db, subtask.task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    await require_project_member(task.project_id, current_user, db)
     await crud.delete_subtask(db, subtask)
     return Response(status_code=204)

@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.crud import epics as crud
 from app.crud import projects as projects_crud
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, require_project_member
 from app.models.epic import Epic
 from app.models.user import User
 from app.schemas.epic import EpicCreate, EpicOut, EpicUpdate
@@ -31,6 +31,7 @@ async def list_epics(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    await require_project_member(project_id, current_user, db)
     project = await projects_crud.get_project(db, project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -49,6 +50,7 @@ async def create_epic(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    await require_project_member(project_id, current_user, db)
     project = await projects_crud.get_project(db, project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -67,6 +69,7 @@ async def update_epic(
     epic = await crud.get_epic(db, epic_id)
     if epic is None:
         raise HTTPException(status_code=404, detail="Epic not found")
+    await require_project_member(epic.project_id, current_user, db)
     epic = await crud.update_epic(db, epic, data)
     progress = await crud.compute_epic_progress(db, epic.id)
     return _epic_out(epic, progress)
@@ -81,5 +84,6 @@ async def delete_epic(
     epic = await crud.get_epic(db, epic_id)
     if epic is None:
         raise HTTPException(status_code=404, detail="Epic not found")
+    await require_project_member(epic.project_id, current_user, db)
     await crud.delete_epic(db, epic)
     return Response(status_code=204)
