@@ -120,6 +120,7 @@ def run_sync(
     epic_id: int = typer.Argument(..., metavar="epic-id", help="등록할 에픽 ID"),
     title: Optional[str] = typer.Option(None, "--title", "-t", help="태스크 제목 (없으면 자동 생성)"),
     priority: Optional[str] = typer.Option(None, "--priority", "-p", help="우선순위: low/medium/high (없으면 자동 감지)"),
+    status: str = typer.Option("done", "--status", "-s", help="등록 상태: todo/in_progress/done (기본: done)"),
     dry_run: bool = typer.Option(False, "--dry-run", help="실제 등록 없이 미리보기"),
     commits: int = typer.Option(1, "--commits", "-n", help="분석할 최근 커밋 수 (기본 1)"),
 ):
@@ -127,9 +128,10 @@ def run_sync(
     최근 git 변경 내역을 분석해 칸반 보드에 태스크를 자동 등록합니다.
 
     예시:
-      kanban sync run 3                  # epic 3에 자동 등록
-      kanban sync run 3 --dry-run        # 미리보기만
-      kanban sync run 3 --commits 3      # 최근 3커밋 분석
+      kanban sync run 3                   # epic 3에 done으로 등록
+      kanban sync run 3 --status todo     # todo(예정)로 등록
+      kanban sync run 3 --dry-run         # 미리보기만
+      kanban sync run 3 --commits 3       # 최근 3커밋 분석
       kanban sync run 3 --title "기능 완료"
     """
     console.print("[bold blue]🔍 git 변경 내역 분석 중...[/bold blue]")
@@ -162,10 +164,12 @@ def run_sync(
     # 3. 미리보기
     console.print()
     table = Table(show_header=False, box=None, padding=(0, 2))
+    status_label = {"todo": "📋 todo (예정)", "in_progress": "🔄 in_progress", "done": "✅ done"}.get(status, status)
     table.add_row("[dim]제목[/dim]", f"[bold]{auto_title}[/bold]")
     table.add_row("[dim]에픽[/dim]", str(epic_id))
     table.add_row("[dim]카테고리[/dim]", category)
     table.add_row("[dim]우선순위[/dim]", auto_priority)
+    table.add_row("[dim]상태[/dim]", status_label)
     table.add_row("[dim]커밋[/dim]", f"{commit_hash} {commit_msg}" if commit_hash else "없음")
     table.add_row("[dim]변경파일[/dim]", f"{len(changed_files)}개")
     console.print(Panel(table, title="[bold]📋 등록할 태스크[/bold]", border_style="blue"))
@@ -183,15 +187,18 @@ def run_sync(
         "description": description,
         "priority": auto_priority,
     }
+    payload["status"] = status
     task_data = client.post(f"/epics/{epic_id}/tasks", json=payload).json()
     task_id = task_data["id"]
 
-    # 5. done 처리
-    client.patch(f"/tasks/{task_id}/status", json={"status": "done"})
+    # status가 todo가 아니면 상태 업데이트
+    if status != "todo":
+        client.patch(f"/tasks/{task_id}/status", json={"status": status})
 
-    console.print(f"\n[bold green]✅ 태스크 등록 완료![/bold green]")
+    icon = "📋" if status == "todo" else "✅"
+    console.print(f"\n[bold green]{icon} 태스크 등록 완료![/bold green]")
     console.print(f"   ID: [bold]{task_id}[/bold]  제목: {auto_title}")
-    console.print(f"   상태: done  우선순위: {auto_priority}")
+    console.print(f"   상태: {status}  우선순위: {auto_priority}")
     console.print(f"\n   🌐 [link=https://1000school-kanban.vercel.app]https://1000school-kanban.vercel.app[/link]")
 
 
