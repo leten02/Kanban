@@ -6,7 +6,7 @@ class Task(Base):
     __tablename__ = "tasks"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    epic_id = Column(Integer, ForeignKey("epics.id", ondelete="CASCADE"), nullable=False)
+    epic_id = Column(Integer, ForeignKey("epics.id", ondelete="SET NULL"), nullable=True)
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     title = Column(String, nullable=False)
     description = Column(String, nullable=True)

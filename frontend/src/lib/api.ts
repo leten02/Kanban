@@ -60,7 +60,7 @@ export interface Epic {
 
 export interface Task {
   id: number;
-  epic_id: number;
+  epic_id: number | null;
   project_id: number;
   title: string;
   description: string | null;
@@ -69,6 +69,7 @@ export interface Task {
   assignee_user_id: number | null;
   assignee_member_id: number | null;
   assignee_name: string | null;
+  start_date: string | null;
   due_date: string | null;
   tags: string[];
 }
@@ -117,24 +118,33 @@ export const epicApi = {
   delete: (id: number) => api.delete(`/epics/${id}`),
 };
 
+type TaskCreatePayload = {
+  title: string;
+  description?: string | null;
+  assignee_user_id?: number | null;
+  assignee_member_id?: number | null;
+  priority?: 'low' | 'medium' | 'high';
+  start_date?: string | null;
+  due_date?: string | null;
+  tags?: string[];
+};
+
 export const taskApi = {
   list: (projectId: number, status?: string) =>
     api.get<Task[]>(`/projects/${projectId}/tasks`, { params: { status } }),
-  create: (epicId: number, data: {
-    title: string;
-    description?: string | null;
-    assignee_user_id?: number | null;
-    assignee_member_id?: number | null;
-    priority?: 'low' | 'medium' | 'high';
-    due_date?: string | null;
-    tags?: string[];
-  }) => api.post<Task>(`/epics/${epicId}/tasks`, data),
+  /** 에픽 없이 프로젝트에 바로 태스크 생성 */
+  createForProject: (projectId: number, data: TaskCreatePayload) =>
+    api.post<Task>(`/projects/${projectId}/tasks`, data),
+  /** 특정 에픽 아래에 태스크 생성 */
+  create: (epicId: number, data: TaskCreatePayload) =>
+    api.post<Task>(`/epics/${epicId}/tasks`, data),
   update: (id: number, data: {
     title?: string | null;
     description?: string | null;
     assignee_user_id?: number | null;
     assignee_member_id?: number | null;
     priority?: 'low' | 'medium' | 'high' | null;
+    start_date?: string | null;
     due_date?: string | null;
     tags?: string[] | null;
   }) => api.patch<Task>(`/tasks/${id}`, data),

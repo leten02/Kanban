@@ -44,6 +44,7 @@ export interface ChecklistItem {
 
 export interface Task {
   id: string;
+  epic_id: number | null;
   title: string;
   description: string;
   assignees: string[];
@@ -80,13 +81,14 @@ const toApiStatus = (s: Task["status"]): string => {
 
 const apiTaskToFrontend = (t: ApiTask): Task => ({
   id: String(t.id),
+  epic_id: t.epic_id,
   title: t.title,
   description: t.description || "",
   assignees: t.assignee_name ? [t.assignee_name] : [],
   assignee_member_id: t.assignee_member_id,
   assignee_name: t.assignee_name,
   priority: t.priority || "medium",
-  startDate: undefined,
+  startDate: t.start_date || undefined,
   dueDate: t.due_date || "",
   status: toFrontendStatus(t.status),
   tags: t.tags || [],
@@ -160,19 +162,21 @@ function AppContent() {
   };
 
   const addTask = async (newTask: Omit<Task, "id">) => {
-    if (!selectedProject || !epicsForProject.length) {
-      toast.error('에픽이 없습니다. 에픽 탭에서 먼저 에픽을 생성하세요.');
-      return;
-    }
+    if (!selectedProject) return;
+    const payload = {
+      title: newTask.title,
+      description: newTask.description || null,
+      priority: newTask.priority,
+      start_date: newTask.startDate || null,
+      due_date: newTask.dueDate || null,
+      assignee_member_id: newTask.assignee_member_id ?? null,
+      tags: newTask.tags || [],
+    };
     try {
-      const res = await taskApi.create(epicsForProject[0].id, {
-        title: newTask.title,
-        description: newTask.description || null,
-        priority: newTask.priority,
-        due_date: newTask.dueDate || null,
-        assignee_member_id: newTask.assignee_member_id ?? null,
-        tags: newTask.tags || [],
-      });
+      // 에픽이 있으면 첫 번째 에픽에, 없으면 프로젝트에 바로 생성
+      const res = epicsForProject.length > 0
+        ? await taskApi.create(epicsForProject[0].id, payload)
+        : await taskApi.createForProject(selectedProject.id, payload);
       setTasks((prev) => [...prev, apiTaskToFrontend(res.data)]);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ?? '작업 생성에 실패했습니다';
@@ -182,8 +186,13 @@ function AppContent() {
 
   const deleteTask = (taskId: string) => {
     if (selectedTask?.id === taskId) setSelectedTask(null);
+    const backup = tasks.find((t) => t.id === taskId);
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
-    taskApi.delete(Number(taskId)).catch(console.error);
+    taskApi.delete(Number(taskId)).catch((err) => {
+      console.error(err);
+      if (backup) setTasks((prev) => [...prev, backup]);
+      toast.error('삭제에 실패했습니다');
+    });
   };
 
   const updateTask = (taskId: string, updates: Partial<Task>) => {
@@ -193,7 +202,7 @@ function AppContent() {
       taskApi.updateStatus(Number(taskId), toApiStatus(updates.status)).catch(console.error);
     }
     // 나머지 필드 변경 (status 제외)
-    const { status: _s, comments: _c, checklist: _ch, ...rest } = updates;
+    const { status: _s, comments: _c, checklist: _ch, epic_id: _e, ...rest } = updates;
     if (Object.keys(rest).length > 0) {
       taskApi.update(Number(taskId), {
         title: rest.title,
@@ -354,6 +363,7 @@ function AppContent() {
           {viewMode === "timeline" && (
             <TimelineView
               tasks={tasks}
+              epics={epicsForProject}
               updateTask={updateTask}
               deleteTask={deleteTask}
             />

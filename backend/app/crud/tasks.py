@@ -64,10 +64,10 @@ async def get_task(db: AsyncSession, task_id: int) -> Task | None:
 
 async def create_task(
     db: AsyncSession,
-    epic_id: int,
     project_id: int,
     data: TaskCreate,
     user_id: int,
+    epic_id: int | None = None,
 ) -> dict:
     assignee_name = None
     if data.assignee_member_id is not None:
@@ -82,6 +82,7 @@ async def create_task(
         assignee_member_id=data.assignee_member_id,
         assignee_name=assignee_name,
         priority=data.priority,
+        start_date=data.start_date,
         due_date=data.due_date,
         created_by_user_id=user_id,
     )

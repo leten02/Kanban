@@ -39,7 +39,6 @@ export function AddTaskModal({ isOpen, onClose, onAdd, projectId, initialStatus 
     if (isSubmitting) return;
 
     if (!formData.title.trim()) return;
-    if (!formData.dueDate) return;
 
     setIsSubmitting(true);
 
@@ -139,13 +138,12 @@ export function AddTaskModal({ isOpen, onClose, onAdd, projectId, initialStatus 
               </div>
 
               <div>
-                <label className="block text-sm mb-1.5">마감일 *</label>
+                <label className="block text-sm mb-1.5">마감일</label>
                 <input
                   type="date"
                   value={formData.dueDate}
                   onChange={e => setFormData({ ...formData, dueDate: e.target.value })}
                   className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
-                  required
                 />
               </div>
             </div>
@@ -199,7 +197,7 @@ export function AddTaskModal({ isOpen, onClose, onAdd, projectId, initialStatus 
             </button>
             <button
               type="submit"
-              disabled={!formData.title.trim() || !formData.dueDate || isSubmitting}
+              disabled={!formData.title.trim() || isSubmitting}
               className="flex-1 px-4 py-2.5 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? '추가 중...' : '추가'}

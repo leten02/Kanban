@@ -31,7 +31,7 @@ class TaskStatusUpdate(BaseModel):
 
 class TaskOut(BaseModel):
     id: int
-    epic_id: int
+    epic_id: int | None
     project_id: int
     title: str
     description: str | None

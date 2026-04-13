@@ -24,6 +24,21 @@ async def list_tasks(
     return await crud.get_tasks(db, project_id, status)
 
 
+@router.post("/projects/{project_id}/tasks", response_model=TaskOut, status_code=201)
+async def create_task_for_project(
+    project_id: int,
+    data: TaskCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """에픽 없이 프로젝트에 바로 태스크 생성 (epic_id = null)."""
+    from app.crud import projects as projects_crud
+    project = await projects_crud.get_project(db, project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return await crud.create_task(db, project_id, data, current_user.id, epic_id=None)
+
+
 @router.post("/epics/{epic_id}/tasks", response_model=TaskOut, status_code=201)
 async def create_task(
     epic_id: int,
@@ -31,10 +46,11 @@ async def create_task(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """특정 에픽 아래에 태스크 생성."""
     epic = await epics_crud.get_epic(db, epic_id)
     if epic is None:
         raise HTTPException(status_code=404, detail="Epic not found")
-    return await crud.create_task(db, epic_id, epic.project_id, data, current_user.id)
+    return await crud.create_task(db, epic.project_id, data, current_user.id, epic_id=epic_id)
 
 
 @router.patch("/tasks/{task_id}", response_model=TaskOut)
