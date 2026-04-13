@@ -82,6 +82,7 @@ async def create_task(
         assignee_member_id=data.assignee_member_id,
         assignee_name=assignee_name,
         priority=data.priority,
+        status=data.status,
         start_date=data.start_date,
         due_date=data.due_date,
         created_by_user_id=user_id,

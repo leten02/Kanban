@@ -167,6 +167,7 @@ function AppContent() {
       title: newTask.title,
       description: newTask.description || null,
       priority: newTask.priority,
+      status: toApiStatus(newTask.status) as 'todo' | 'in_progress' | 'in_review' | 'done',
       start_date: newTask.startDate || null,
       due_date: newTask.dueDate || null,
       assignee_member_id: newTask.assignee_member_id ?? null,

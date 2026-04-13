@@ -9,6 +9,7 @@ class TaskCreate(BaseModel):
     assignee_user_id: int | None = None
     assignee_member_id: int | None = None
     priority: Literal["low", "medium", "high"] = "medium"
+    status: Literal["todo", "in_progress", "in_review", "done"] = "todo"
     start_date: date | None = None
     due_date: date | None = None
     tags: list[str] = []

@@ -124,6 +124,7 @@ type TaskCreatePayload = {
   assignee_user_id?: number | null;
   assignee_member_id?: number | null;
   priority?: 'low' | 'medium' | 'high';
+  status?: 'todo' | 'in_progress' | 'in_review' | 'done';
   start_date?: string | null;
   due_date?: string | null;
   tags?: string[];

@@ -90,31 +90,30 @@ export function ProjectDashboard() {
                 key={project.id}
                 className="bg-white rounded-lg border border-neutral-200 p-6 hover:border-neutral-300 transition-all group"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-medium mb-1">{project.name}</h3>
-                    {project.description && (
-                      <p className="text-sm text-neutral-600 line-clamp-2">{project.description}</p>
-                    )}
-                  </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-start justify-between mb-3">
+                  <h3 className="text-base font-medium leading-snug flex-1 mr-2">{project.name}</h3>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                     <button
-                      onClick={() => setEditingProject(project)}
+                      onClick={(e) => { e.stopPropagation(); setEditingProject(project); }}
                       className="p-1.5 hover:bg-neutral-100 rounded transition-colors"
                     >
-                      <Edit2 className="w-4 h-4 text-neutral-600" />
+                      <Edit2 className="w-3.5 h-3.5 text-neutral-500" />
                     </button>
                     <button
-                      onClick={() => handleDeleteProject(project.id)}
+                      onClick={(e) => { e.stopPropagation(); handleDeleteProject(project.id); }}
                       className="p-1.5 hover:bg-red-50 rounded transition-colors"
                     >
-                      <Trash2 className="w-4 h-4 text-red-600" />
+                      <Trash2 className="w-3.5 h-3.5 text-red-500" />
                     </button>
                   </div>
                 </div>
 
-                <div className="text-xs text-neutral-500 mb-4">
-                  생성일: {formatDate(project.created_at)}
+                <p className="text-sm text-neutral-500 line-clamp-2 mb-4 min-h-[2.5rem]">
+                  {project.description || '설명 없음'}
+                </p>
+
+                <div className="text-xs text-neutral-400 mb-4">
+                  생성일 {formatDate(project.created_at)}
                 </div>
 
                 <button

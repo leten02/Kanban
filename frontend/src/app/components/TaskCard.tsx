@@ -1,6 +1,6 @@
 import { useDrag } from 'react-dnd';
 import { Task } from '../App';
-import { CheckSquare, Calendar } from 'lucide-react';
+import { CheckSquare, Calendar, ArrowUp, ArrowRight, ArrowDown } from 'lucide-react';
 import { getAvatarColor } from '../../lib/avatarUtils';
 
 interface TaskCardProps {
@@ -40,6 +40,30 @@ function DueDateBadge({ dueDate }: { dueDate: string }) {
   );
 }
 
+const PRIORITY_CONFIG = {
+  high:   { label: '높음', icon: ArrowUp,    cls: 'text-red-500' },
+  medium: { label: '보통', icon: ArrowRight, cls: 'text-amber-500' },
+  low:    { label: '낮음', icon: ArrowDown,  cls: 'text-blue-400' },
+};
+
+// 태그 해시 기반 색상 — 한국어 포함 모든 태그에 일관된 색 적용
+const TAG_PALETTES = [
+  'bg-blue-100 text-blue-700',
+  'bg-green-100 text-green-700',
+  'bg-purple-100 text-purple-700',
+  'bg-amber-100 text-amber-700',
+  'bg-rose-100 text-rose-700',
+  'bg-teal-100 text-teal-700',
+  'bg-indigo-100 text-indigo-700',
+  'bg-orange-100 text-orange-700',
+];
+
+function getTagColor(tag: string): string {
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+  return TAG_PALETTES[Math.abs(hash) % TAG_PALETTES.length];
+}
+
 export function TaskCard({ task, onClick }: TaskCardProps) {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: 'TASK',
@@ -49,16 +73,9 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
     })
   }));
 
-
-  const getTagColor = (tag: string) => {
-    const tagLower = tag.toLowerCase();
-    if (tagLower.includes('backend')) return 'bg-blue-100 text-blue-700';
-    if (tagLower.includes('frontend')) return 'bg-green-100 text-green-700';
-    if (tagLower.includes('design')) return 'bg-purple-100 text-purple-700';
-    if (tagLower.includes('database')) return 'bg-amber-100 text-amber-700';
-    if (tagLower.includes('security')) return 'bg-red-100 text-red-700';
-    return 'bg-neutral-100 text-neutral-700';
-  };
+  const priority = PRIORITY_CONFIG[task.priority] ?? PRIORITY_CONFIG.medium;
+  const PriorityIcon = priority.icon;
+  const assigneeName = task.assignee_name ?? task.assignees[0];
 
   return (
     <div
@@ -68,61 +85,52 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
         isDragging ? 'opacity-50' : 'opacity-100'
       }`}
     >
-      <div className="mb-2">
-        <h4 className="text-sm text-neutral-900 leading-tight mb-2">{task.title}</h4>
+      {/* 제목 */}
+      <h4 className="text-sm text-neutral-900 leading-tight mb-2">{task.title}</h4>
 
-        {task.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-2">
-            {task.tags.map(tag => (
-              <span
-                key={tag}
-                className={`text-xs px-2 py-0.5 rounded font-medium ${getTagColor(tag)}`}
-              >
-                {tag.toUpperCase()}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* 태그 */}
+      {task.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-2">
+          {task.tags.map(tag => (
+            <span key={tag} className={`text-xs px-1.5 py-0.5 rounded font-medium ${getTagColor(tag)}`}>
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-neutral-500">TFT-{task.id}</span>
+      {/* 하단 메타 */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 flex-wrap min-w-0">
+          {/* 우선순위 */}
+          <span className={`inline-flex items-center gap-0.5 text-xs ${priority.cls}`} title={`우선순위: ${priority.label}`}>
+            <PriorityIcon className="w-3 h-3" />
+          </span>
+
+          {/* ID */}
+          <span className="text-xs text-neutral-400">TFT-{task.id}</span>
+
+          {/* 서브태스크 진행 */}
           {task.checklist.length > 0 && (
             <div className="flex items-center gap-1 text-xs text-neutral-500">
               <CheckSquare className="w-3 h-3" />
-              <span>{task.checklist.filter(item => item.completed).length}/{task.checklist.length}</span>
+              <span>{task.checklist.filter(i => i.completed).length}/{task.checklist.length}</span>
             </div>
           )}
+
+          {/* 마감일 */}
           {task.dueDate && <DueDateBadge dueDate={task.dueDate} />}
         </div>
-        <div className="flex -space-x-1 flex-shrink-0">
-          {task.assignee_name ? (
-            <div
-              className={`w-6 h-6 rounded-full ${getAvatarColor(task.assignee_name)} flex items-center justify-center text-xs text-white font-medium border-2 border-white`}
-              title={task.assignee_name}
-            >
-              {task.assignee_name.charAt(0)}
-            </div>
-          ) : (
-            <>
-              {task.assignees.slice(0, 3).map((assignee, idx) => (
-                <div
-                  key={idx}
-                  className={`w-6 h-6 rounded-full ${getAvatarColor(assignee)} flex items-center justify-center text-xs text-white font-medium border-2 border-white`}
-                  title={assignee}
-                >
-                  {assignee.charAt(0)}
-                </div>
-              ))}
-              {task.assignees.length > 3 && (
-                <div className="w-6 h-6 rounded-full bg-neutral-400 flex items-center justify-center text-xs text-white font-medium border-2 border-white">
-                  +{task.assignees.length - 3}
-                </div>
-              )}
-            </>
-          )}
-        </div>
+
+        {/* 담당자 아바타 */}
+        {assigneeName && (
+          <div
+            className={`w-6 h-6 rounded-full flex-shrink-0 ${getAvatarColor(assigneeName)} flex items-center justify-center text-xs text-white font-medium`}
+            title={assigneeName}
+          >
+            {assigneeName.charAt(0)}
+          </div>
+        )}
       </div>
     </div>
   );
