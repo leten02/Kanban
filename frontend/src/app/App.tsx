@@ -161,7 +161,7 @@ function AppContent() {
     });
   };
 
-  const addTask = async (newTask: Omit<Task, "id">) => {
+  const addTask = async (newTask: Omit<Task, "id"> & { epic_id?: number | null }) => {
     if (!selectedProject) return;
     const payload = {
       title: newTask.title,
@@ -174,9 +174,10 @@ function AppContent() {
       tags: newTask.tags || [],
     };
     try {
-      // 에픽이 있으면 첫 번째 에픽에, 없으면 프로젝트에 바로 생성
-      const res = epicsForProject.length > 0
-        ? await taskApi.create(epicsForProject[0].id, payload)
+      // 모달에서 선택한 에픽 → 없으면 첫 번째 에픽 → 없으면 프로젝트에 바로 생성
+      const epicId = newTask.epic_id ?? (epicsForProject.length > 0 ? epicsForProject[0].id : null);
+      const res = epicId
+        ? await taskApi.create(epicId, payload)
         : await taskApi.createForProject(selectedProject.id, payload);
       setTasks((prev) => [...prev, apiTaskToFrontend(res.data)]);
     } catch (err: unknown) {
@@ -392,6 +393,7 @@ function AppContent() {
           onClose={() => setIsModalOpen(false)}
           onAdd={addTask}
           projectId={selectedProject.id}
+          epics={epicsForProject}
           initialStatus={initialTaskStatus}
         />
 

@@ -3,16 +3,18 @@ import { Task } from '../App';
 import { X } from 'lucide-react';
 import { AssigneePicker } from './AssigneePicker';
 import { TagPicker } from './TagPicker';
+import { Epic } from '../../lib/api';
 
 interface AddTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (task: Omit<Task, 'id'>) => void;
+  onAdd: (task: Omit<Task, 'id'> & { epic_id?: number | null }) => void;
   projectId: number;
+  epics?: Epic[];
   initialStatus?: Task['status'];
 }
 
-export function AddTaskModal({ isOpen, onClose, onAdd, projectId, initialStatus }: AddTaskModalProps) {
+export function AddTaskModal({ isOpen, onClose, onAdd, projectId, epics = [], initialStatus }: AddTaskModalProps) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -23,14 +25,19 @@ export function AddTaskModal({ isOpen, onClose, onAdd, projectId, initialStatus 
     dueDate: '',
     status: (initialStatus ?? 'todo') as Task['status'],
     tags: [] as string[],
+    epic_id: null as number | null,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      setFormData(prev => ({ ...prev, status: initialStatus ?? 'todo' }));
+      setFormData(prev => ({
+        ...prev,
+        status: initialStatus ?? 'todo',
+        epic_id: epics.length > 0 ? epics[0].id : null,
+      }));
     }
-  }, [isOpen, initialStatus]);
+  }, [isOpen, initialStatus, epics]);
 
   if (!isOpen) return null;
 
@@ -53,6 +60,7 @@ export function AddTaskModal({ isOpen, onClose, onAdd, projectId, initialStatus 
       dueDate: formData.dueDate,
       status: formData.status,
       tags: formData.tags,
+      epic_id: formData.epic_id,
       comments: [],
       checklist: [],
     });
@@ -67,6 +75,7 @@ export function AddTaskModal({ isOpen, onClose, onAdd, projectId, initialStatus 
       dueDate: '',
       status: 'todo',
       tags: [],
+      epic_id: epics.length > 0 ? epics[0].id : null,
     });
     setIsSubmitting(false);
     onClose();
@@ -114,6 +123,22 @@ export function AddTaskModal({ isOpen, onClose, onAdd, projectId, initialStatus 
                 rows={3}
               />
             </div>
+
+            {epics.length > 0 && (
+              <div>
+                <label className="block text-sm mb-1.5">에픽</label>
+                <select
+                  value={formData.epic_id ?? ''}
+                  onChange={e => setFormData({ ...formData, epic_id: e.target.value ? Number(e.target.value) : null })}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent"
+                >
+                  <option value="">에픽 없음</option>
+                  {epics.map(epic => (
+                    <option key={epic.id} value={epic.id}>{epic.title}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm mb-1.5">담당자</label>
