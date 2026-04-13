@@ -125,3 +125,22 @@ def whoami():
     typer.echo(f"Name:  {data.get('name', '')}")
     typer.echo(f"Email: {data.get('email', '')}")
 
+
+@app.command("set-epic")
+def set_epic(
+    epic_id: int = typer.Argument(..., metavar="epic-id", help="기본 에픽 ID (kanban sync 자동 등록에 사용)"),
+):
+    """kanban sync 자동 등록에 사용할 기본 에픽 ID를 설정합니다."""
+    config.set_default_epic_id(epic_id)
+    typer.echo(f"기본 에픽 ID가 {epic_id}로 설정되었습니다.")
+    typer.echo("이제 Claude Code 작업이 자동으로 이 에픽에 등록됩니다.")
+
+
+@app.command("config-show")
+def config_show():
+    """현재 CLI 설정을 확인합니다."""
+    typer.echo(f"서버 URL:      {config.get_server_url()}")
+    typer.echo(f"토큰:          {'설정됨' if config.get_token() else '없음'}")
+    epic_id = config.get_default_epic_id()
+    typer.echo(f"기본 에픽 ID:  {epic_id if epic_id is not None else '미설정'}")
+

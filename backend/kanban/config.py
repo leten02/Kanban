@@ -59,3 +59,17 @@ def set_server_url(url: str) -> None:
     cfg = load_config()
     cfg["server_url"] = url
     save_config(cfg)
+
+
+def get_default_epic_id() -> int | None:
+    val = load_config().get("default_epic_id")
+    return int(val) if val is not None else None
+
+
+def set_default_epic_id(epic_id: int | None) -> None:
+    cfg = load_config()
+    if epic_id is None:
+        cfg.pop("default_epic_id", None)
+    else:
+        cfg["default_epic_id"] = epic_id
+    save_config(cfg)
