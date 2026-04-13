@@ -30,6 +30,14 @@ async def lifespan(app: FastAPI):
         raise RuntimeError("SECRET_KEY must be changed before running in production.")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # 스키마 마이그레이션: epic_id NOT NULL → nullable (create_all은 기존 컬럼 변경 안 함)
+        is_pg = settings.database_url.startswith(("postgresql", "postgres"))
+        if is_pg:
+            await conn.execute(
+                __import__("sqlalchemy").text(
+                    "ALTER TABLE tasks ALTER COLUMN epic_id DROP NOT NULL"
+                )
+            )
     yield
 
 
