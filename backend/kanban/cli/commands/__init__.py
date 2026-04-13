@@ -7,3 +7,4 @@ from . import subtasks
 from . import rooms
 from . import team
 from . import notify
+from . import sync

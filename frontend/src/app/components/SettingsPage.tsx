@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { memberApi, projectApi, ProjectMember } from '../../lib/api';
-import { RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
+import { memberApi, projectApi, schoolApi, ProjectMember } from '../../lib/api';
+import { RefreshCw, Trash2, AlertTriangle, CheckCircle2, Link, Eye, EyeOff } from 'lucide-react';
 import { getAvatarColor } from '../../lib/avatarUtils';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface SettingsPageProps {
   projectId: number;
@@ -36,11 +37,17 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export function SettingsPage({ projectId, projectName, projectDescription, onDeleteProject }: SettingsPageProps) {
+  const { user, refreshUser } = useAuth();
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // 1000school 토큰 연동
+  const [schoolToken, setSchoolToken] = useState('');
+  const [showToken, setShowToken] = useState(false);
+  const [linking, setLinking] = useState(false);
 
   useEffect(() => {
     memberApi.list(projectId)
@@ -81,6 +88,22 @@ export function SettingsPage({ projectId, projectName, projectDescription, onDel
     }
   };
 
+  const handleLinkSchool = async () => {
+    if (!schoolToken.trim()) return;
+    setLinking(true);
+    try {
+      await schoolApi.linkAccount(schoolToken.trim());
+      await refreshUser();
+      setSchoolToken('');
+      toast.success('1000school 계정이 연결되었습니다.');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } }).response?.data?.detail ?? '토큰 연결에 실패했습니다.';
+      toast.error(msg);
+    } finally {
+      setLinking(false);
+    }
+  };
+
   const handleDeleteProject = async () => {
     setDeleting(true);
     try {
@@ -110,6 +133,63 @@ export function SettingsPage({ projectId, projectName, projectDescription, onDel
               <p className="text-sm text-neutral-700">{projectDescription}</p>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* 1000school 계정 연동 */}
+      <section>
+        <h2 className="text-base font-medium mb-4 text-neutral-900">1000school 계정 연동</h2>
+        <div className="bg-white border border-neutral-200 rounded-lg p-4 space-y-4">
+          {/* 연결 상태 */}
+          <div className="flex items-center gap-2">
+            {user?.has_school_token ? (
+              <>
+                <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                <span className="text-sm text-green-700">계정 연결됨 — 본인 명의로 회의실 예약 가능</span>
+              </>
+            ) : (
+              <>
+                <Link className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+                <span className="text-sm text-neutral-500">미연결 — 회의실 예약 시 공용 토큰이 사용됩니다</span>
+              </>
+            )}
+          </div>
+
+          {/* 토큰 입력 */}
+          <div className="space-y-2">
+            <label className="text-xs text-neutral-500">
+              {user?.has_school_token ? '새 토큰으로 교체' : '개인 API 토큰 입력'}
+            </label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <input
+                  type={showToken ? 'text' : 'password'}
+                  value={schoolToken}
+                  onChange={e => setSchoolToken(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleLinkSchool()}
+                  placeholder="1000school API 토큰"
+                  className="w-full px-3 py-2 pr-10 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowToken(v => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                >
+                  {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <button
+                onClick={handleLinkSchool}
+                disabled={linking || !schoolToken.trim()}
+                className="px-4 py-2 text-sm bg-neutral-900 text-white rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-40 whitespace-nowrap"
+              >
+                {linking ? '확인 중...' : '연결'}
+              </button>
+            </div>
+            <p className="text-xs text-neutral-400">
+              api.1000.school → 개인 설정에서 토큰 발급 후 입력하세요.
+            </p>
+          </div>
         </div>
       </section>
 
