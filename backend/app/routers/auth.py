@@ -1,3 +1,4 @@
+import time
 import urllib.parse
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -70,9 +71,13 @@ async def google_callback(
 
     # Railway's reverse proxy can drop session cookies between login→callback.
     # Re-inject the state from the query param so Authlib's CSRF check passes.
+    # authlib's get_state_data reads session[key]["data"], so we must match that format.
     state = request.query_params.get("state", "")
     if state:
-        request.session[f"_state_google_{state}"] = {"state": state}
+        request.session[f"_state_google_{state}"] = {
+            "data": {"redirect_uri": settings.google_redirect_uri},
+            "exp": time.time() + 300,
+        }
 
     token = await google.authorize_access_token(request)
 
